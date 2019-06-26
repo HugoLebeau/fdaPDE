@@ -6,10 +6,10 @@
 FPCAObject::FPCAObject(const MatrixXr& datamatrix_)
 {
 	//Initialize loadings vector
-	RedSVD::RedSVD<MatrixXr> svd(datamatrix_,1); 
+	Eigen::JacobiSVD<DenseMatrix> svd(datamatrix_, Eigen::ComputeThinU | Eigen::ComputeThinV);
 		
 	loadings_=svd.matrixV().col(0);
-	scores_=svd.matrixU().col(0);
+	scores_=svd.matrixU().col(0); // (U * S)[:,1] / ||(U * S)[:,1]||
 }
 
 
