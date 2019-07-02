@@ -24,7 +24,7 @@ SEXP regression_skeleton(InputHandler &regressionData, SEXP Rmesh)
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh);
 	MixedFERegression<InputHandler, Integrator,ORDER, mydim, ndim> regression(mesh,regressionData);
 
-	regression.apply(); 
+	regression.apply();
 
 	const std::vector<VectorXr>& solution = regression.getSolution();
 	const std::vector<Real>& dof = regression.getDOF();
@@ -193,11 +193,11 @@ extern "C" {
 */
 
 SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim,
-					SEXP Rlambda, SEXP Rcovariates, SEXP incidenceMatrix, SEXP arealData, SEXP RBCIndices,
+					SEXP Rlambda, SEXP Rcovariates, SEXP RincidenceMatrix, SEXP RarealData, SEXP RBCIndices,
 					SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
 {
     //Set input data
-	RegressionData regressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations);
+	RegressionData regressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RincidenceMatrix, RarealData, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations);
 	
 	UInt mydim=INTEGER(Rmydim)[0];
 	UInt ndim=INTEGER(Rndim)[0];
@@ -210,15 +210,16 @@ SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Ro
 		return(regression_skeleton<RegressionData,IntegratorTriangleP2, 1, 2, 3>(regressionData, Rmesh));
    else if(regressionData.getOrder()==2 && mydim==2 && ndim==3)
 		return(regression_skeleton<RegressionData,IntegratorTriangleP4, 2, 2, 3>(regressionData, Rmesh));
-	else if(regressionData.getOrder() == 1 && mydim==3 && ndim==3)
+	else if(regressionData.getOrder()==1 && mydim==3 && ndim==3)
 		return(regression_skeleton<RegressionData,IntegratorTetrahedronP2, 1, 3, 3>(regressionData, Rmesh));
     return(NILSXP);
 }
 
-SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim, SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
+SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim,
+					SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RincidenceMatrix,
+					SEXP RarealData, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
 {
-	RegressionDataElliptic regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations);
+	RegressionDataElliptic regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Rcovariates, RincidenceMatrix, RarealData, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations);
 	
 	UInt mydim=INTEGER(Rmydim)[0];
 	UInt ndim=INTEGER(Rndim)[0];
@@ -236,8 +237,9 @@ SEXP regression_PDE(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder
 
 
 
-SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim, SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
+SEXP regression_PDE_space_varying(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim,
+								SEXP Rlambda, SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RincidenceMatrix,
+								SEXP RarealData, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
 {
     //Set data 
 	RegressionDataEllipticSpaceVarying regressionData(Rlocations, Robservations, Rorder, Rlambda, RK, Rbeta, Rc, Ru, Rcovariates, RBCIndices, RBCValues, DOF,  RGCVmethod, Rnrealizations);

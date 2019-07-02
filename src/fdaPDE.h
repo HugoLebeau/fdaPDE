@@ -34,7 +34,7 @@ typedef double Real;
 typedef int UInt;
 
 typedef Eigen::Matrix<Real,Eigen::Dynamic,Eigen::Dynamic> MatrixXr;
-typedel Eigen::Matrix<UInt,Eigen::Dynamic,Eigen::Dynamic> MatrixXi;
+typedef Eigen::Matrix<UInt,Eigen::Dynamic,Eigen::Dynamic> MatrixXi;
 typedef Eigen::Matrix<Real,Eigen::Dynamic,1> VectorXr;
 typedef Eigen::Matrix<UInt,Eigen::Dynamic,1> VectorXi;
 typedef Eigen::SparseMatrix<Real> SpMat;
