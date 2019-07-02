@@ -171,6 +171,8 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
 #' smoothing with a preferential direction that corresponds to the first eigenvector of the diffusion matrix K; \code{b}, a vector of length 2 of advection coefficients. This induces a 
 #' smoothing only in the direction specified by the vector \code{b}; \code{c}, a scalar reaction coefficient. \code{c} induces a shrinkage of the surface to zero
 #' @param covariates A #observations-by-#covariates matrix where each row represents the covariates associated with the corresponding observed data value in \code{observations}.
+#' @param incidence_matrix A #regions-by-#triangles/tetrahedrons matrix where the element (i,j) equals 1 if the j-th triangle/tetrahedron is in the i-th region and 0 otherwise.
+#' @param areal_data Boolean. If \code{TRUE} the smoothing is computed considering areal data (not pointwise data).
 #' @param BC A list with two vectors: 
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
@@ -215,7 +217,7 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
 #' 
 #' # Evaluate solution in three points
 #' eval.FEM(FEM_CPP_PDE$fit.FEM, locations = rbind(c(0,0),c(0.5,0),c(-2,-2)))
-smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
+smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
 {
  if(class(FEMbasis$mesh) == "MESH2D"){
  	ndim = 2
@@ -226,7 +228,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
  	stop('Unknown mesh class')
  }
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL,GCVmethod , nrealizations)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL,GCVmethod , nrealizations)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))
@@ -235,6 +237,8 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   lambda = as.matrix(lambda)
   if(!is.null(covariates))
     covariates = as.matrix(covariates)
+  if(!is.null(incidence_matrix))
+    incidence_matrix = as.matrix(incidence_matrix)
   if(!is.null(BC))
   {
     BC$BC_indices = as.matrix(BC$BC_indices)
@@ -248,7 +252,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
     PDE_parameters$c = as.matrix(PDE_parameters$c)
   }
   
-  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL, ndim, mydim)
+  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = PDE_parameters, PDE_parameters_func = NULL, ndim, mydim)
   ################## End checking parameters, sizes and conversion #############################
   
   
@@ -260,7 +264,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.PDE.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates,ndim, mydim, BC, GCV,GCVmethod, nrealizations)
+    bigsol = CPP_smooth.FEM.PDE.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, incidence_matrix, areal_data, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -273,13 +277,13 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   PDEmisfit.FEM = FEM(g, FEMbasis)  
   
   reslist = NULL
-  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, CPP_CODE,ndim,mydim)
+  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, areal_data, CPP_CODE, ndim, mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]])
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV,ndim,mydim)
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, areal_data = areal_data, edf = bigsol[[2]])
+    reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV, ndim, mydim)
   }else{
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
+    reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta)
   }
   
   return(reslist)
@@ -308,6 +312,8 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' \code{u} induces a reaction effect. The function must support recycling for efficiency reasons, thus if the input parameter is a #point-by-2 matrix, the output should be
 #' a vector with length #points.
 #' @param covariates A #observations-by-#covariates matrix where each row represents the covariates associated with the corresponding observed data value in \code{observations}.
+#' @param incidence_matrix A #regions-by-#triangles/tetrahedrons matrix where the element (i,j) equals 1 if the j-th triangle/tetrahedron is in the i-th region and 0 otherwise.
+#' @param areal_data Boolean. If \code{TRUE} the smoothing is computed considering areal data (not pointwise data).
 #' @param BC A list with two vectors: 
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
@@ -372,7 +378,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' FEM_CPP_PDE = smooth.FEM.PDE.sv.basis(observations = observations, 
 #'              FEMbasis = FEMbasis, lambda = lambda, PDE_parameters = PDE_parameters)
 #' plot(FEM_CPP_PDE$fit.FEM)
-smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
+smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
 {
  if(class(FEMbasis$mesh) == "MESH2D"){
  	ndim = 2
@@ -383,7 +389,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
  	stop('Unknown mesh class')
  }
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters,GCVmethod , nrealizations)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters,GCVmethod , nrealizations)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))
@@ -392,13 +398,15 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   lambda = as.matrix(lambda)
   if(!is.null(covariates))
     covariates = as.matrix(covariates)
+  if(!is.null(incidence_matrix))
+    incidence_matrix = as.matrix(incidence_matrix)
   if(!is.null(BC))
   {
     BC$BC_indices = as.matrix(BC$BC_indices)
     BC$BC_values = as.matrix(BC$BC_values)
   }
   
-  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters, ndim, mydim)
+  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters, ndim, mydim)
   ################## End checking parameters, sizes and conversion #############################
   
   bigsol = NULL  
@@ -409,7 +417,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.PDE.sv.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
+    bigsol = CPP_smooth.FEM.PDE.sv.basis(locations, observations, FEMbasis, lambda, PDE_parameters, covariates, incidence_matrix, areal_data, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -422,10 +430,10 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   PDEmisfit.FEM = FEM(g, FEMbasis)  
   
   reslist = NULL
-  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, CPP_CODE,ndim,mydim)
+  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, areal_data, CPP_CODE,ndim,mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]],ndim,mydim)
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, areal_data = areal_data, edf = bigsol[[2]],ndim,mydim)
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)

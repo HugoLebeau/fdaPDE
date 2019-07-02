@@ -1,4 +1,4 @@
-CPP_smooth.manifold.FEM.basis<-function(locations, observations, mesh, lambda, covariates = NULL, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.manifold.FEM.basis<-function(locations, observations, mesh, lambda, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
 {
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   # This is done in C++ now to optimize speed
@@ -11,6 +11,11 @@ CPP_smooth.manifold.FEM.basis<-function(locations, observations, mesh, lambda, c
   if(is.null(locations))
   {
     locations<-matrix(nrow = 0, ncol = ndim)
+  }
+
+  if(is.null(incidence_matrix))
+  {
+    incidence_matrix<-matrix(nrow = 0, ncol = 1)
   }
   
   if(is.null(BC$BC_indices))
@@ -40,24 +45,26 @@ CPP_smooth.manifold.FEM.basis<-function(locations, observations, mesh, lambda, c
   storage.mode(mesh$ntriangles) <- "integer"
   storage.mode(mesh$nodes) <- "double"
   storage.mode(mesh$triangles) <- "integer"
-  covariates = as.matrix(covariates)
+  covariates <- as.matrix(covariates)
   storage.mode(covariates) <- "double"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
+  storage.mode(areal_data) <- "logical"
   storage.mode(lambda) <- "double"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
   storage.mode(BC$BC_indices) <- "integer"
   storage.mode(BC$BC_values)  <- "double"
-  GCV = as.integer(GCV)
-  storage.mode(GCV)<-"integer"
+  GCV <- as.integer(GCV)
+  storage.mode(GCV) <- "integer"
   
-   storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
-  bigsol <- .Call("regression_Laplace", locations, data, mesh, 
-                  mesh$order, mydim, ndim, lambda, covariates,
-                  BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
-                  package = "fdaPDE")
+  bigsol <- .Call("regression_Laplace", locations, data, mesh, mesh$order, mydim, ndim, lambda,
+                  covariates, incidence_matrix, areal_data, BC$BC_indices, BC$BC_values, GCV,
+                  GCVmethod, nrealizations, package = "fdaPDE")
 
   return(bigsol)
 }
