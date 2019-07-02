@@ -10,6 +10,8 @@
 #' @param FEMbasis A \code{FEMbasis} object describing the Finite Element basis, as created by \code{\link{create.FEM.basis}}.
 #' @param lambda A scalar or vector of smoothing parameters.
 #' @param covariates A #observations-by-#covariates matrix where each row represents the covariates associated with the corresponding observed data value in \code{observations}.
+#' @param incidence_matrix A #regions-by-#triangles/tetrahedrons matrix where the element (i,j) equals 1 if the j-th triangle/tetrahedron is in the i-th region and 0 otherwise.
+#' @param areal_data Boolean. If \code{TRUE} the smoothing is computed considering areal data (not pointwise data).
 #' @param BC A list with two vectors: 
 #'  \code{BC_indices}, a vector with the indices in \code{nodes} of boundary nodes where a Dirichlet Boundary Condition should be applied;
 #'  \code{BC_values}, a vector with the values that the spatial field must take at the nodes indicated in \code{BC_indices}.
@@ -60,7 +62,7 @@
 #' print(ZincMeuseCovar$beta)
 
 
-smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
+smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100)
 {
  if(class(FEMbasis$mesh) == "MESH2D"){
  	ndim = 2
@@ -75,7 +77,7 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
  	stop('Unknown mesh class')
  }
   ##################### Checking parameters, sizes and conversion ################################
-  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL,GCVmethod , nrealizations)
+  checkSmoothingParameters(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL, GCVmethod , nrealizations)
   
   ## Coverting to format for internal usage
   if(!is.null(locations))
@@ -84,13 +86,15 @@ smooth.FEM.basis<-function(locations = NULL, observations, FEMbasis, lambda, cov
   lambda = as.matrix(lambda)
   if(!is.null(covariates))
     covariates = as.matrix(covariates)
+  if(!is.null(incidence_matrix))
+    incidence_matrix = as.matrix(incidence_matrix)
   if(!is.null(BC))
   {
     BC$BC_indices = as.matrix(BC$BC_indices)
     BC$BC_values = as.matrix(BC$BC_values)
   }
   
-  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL,ndim, mydim)
+  checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL,ndim, mydim)
   ################## End checking parameters, sizes and conversion #############################
   
 if(class(FEMbasis$mesh) == 'MESH2D'){	
@@ -102,12 +106,15 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
     {
       stop('If you want to use Dirichlet boundary conditions, please set CPP_CODE = TRUE')
     }
-    
+    if (areal_data)
+    {
+      stop("If you are using areal data, please set CPP_CODE = TRUE")
+    }
     bigsol = R_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, GCV)   
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates,ndim,mydim, BC, GCV,GCVmethod, nrealizations)
+    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, areal_data, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -116,14 +123,14 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
 
 	  bigsol = NULL  
 	  print('C++ Code Execution')
-	  bigsol = CPP_smooth.manifold.FEM.basis(locations, observations, FEMbasis$mesh, lambda, covariates, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
+	  bigsol = CPP_smooth.manifold.FEM.basis(locations, observations, FEMbasis$mesh, lambda, covariates, incidence_matrix, areal_data, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
 	  
 	  numnodes = FEMbasis$mesh$nnodes
   }else if(class(FEMbasis$mesh) == 'MESH.3D'){
 
 	  bigsol = NULL  
 	  print('C++ Code Execution')
-	  bigsol = CPP_smooth.volume.FEM.basis(locations, observations, FEMbasis$mesh, lambda, covariates, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
+	  bigsol = CPP_smooth.volume.FEM.basis(locations, observations, FEMbasis$mesh, lambda, covariates, incidence_matrix, areal_data, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
 	  
 	  numnodes = FEMbasis$mesh$nnodes
   }
@@ -133,22 +140,22 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
   
   # Make Functional objects object
   fit.FEM  = FEM(f, FEMbasis)
-  PDEmisfit.FEM = FEM(g, FEMbasis)  
+  PDEmisfit.FEM = FEM(g, FEMbasis)
   
   reslist = NULL
-  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, CPP_CODE,ndim,mydim)
+  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, areal_data, CPP_CODE, ndim, mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, edf = bigsol[[2]],ndim,mydim)
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, areal_data = areal_data, edf = bigsol[[2]], ndim, mydim)
+    reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
-    reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
+    reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta)
   }
   
   return(reslist)
 }
 
-#' Spatial regression with differential regularization: anysotropic case (elliptic PDE)
+#' Spatial regression with differential regularization: anisotropic case (elliptic PDE)
 #' 
 #' @param observations A vector of length #observations with the observed data values over the domain. 
 #' The locations of the observations can be specified with the \code{locations} argument. 
@@ -178,7 +185,7 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
 #'          \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
-#' @description This function implements a spatial regression model with differential regularization; anysotropic case. In particular, the regularizing term involves a second order elliptic PDE, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries. This method is implemented and available only for \code{FEMbasis} objects created on planar mesh (\code{MESH2D}) objects.
+#' @description This function implements a spatial regression model with differential regularization; anisotropic case. In particular, the regularizing term involves a second order elliptic PDE, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries. This method is implemented and available only for \code{FEMbasis} objects created on planar mesh (\code{MESH2D}) objects.
 #' @usage smooth.FEM.PDE.basis(locations = NULL, observations, FEMbasis, 
 #'        lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, 
 #'        CPP_CODE = TRUE)
@@ -279,7 +286,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 }
 
 
-#' Spatial regression with differential regularization: anysotropic and non-stationary case (elliptic PDE with space-varying coefficients)
+#' Spatial regression with differential regularization: anisotropic and non-stationary case (elliptic PDE with space-varying coefficients)
 #' 
 #' @param observations A vector of length #observations with the observed data values over the domain. 
 #' The locations of the observations can be specified with the \code{locations} argument. 
@@ -315,7 +322,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #'          \item{\code{edf}}{If GCV is \code{TRUE}, a scalar or vector with the trace of the smoothing matrix for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{stderr}}{If GCV is \code{TRUE}, a scalar or vector with the estimate of the standard deviation of the error for each value of the smoothing parameter specified in \code{lambda}.}
 #'          \item{\code{GCV}}{If GCV is \code{TRUE}, a  scalar or vector with the value of the GCV criterion for each value of the smoothing parameter specified in \code{lambda}.}
-#' @description This function implements a spatial regression model with differential regularization; anysotropic and non-stationary case. In particular, the regularizing term involves a second order elliptic PDE with space-varying coefficients, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries. This method is implemented and available only for \code{FEMbasis} objects created on planar mesh (\code{MESH2D}) objects.
+#' @description This function implements a spatial regression model with differential regularization; anisotropic and non-stationary case. In particular, the regularizing term involves a second order elliptic PDE with space-varying coefficients, that models the space-variation of the phenomenon. Space-varying covariates can be included in the model. The technique accurately handle data distributed over irregularly shaped domains. Moreover, various conditions can be imposed at the domain boundaries. This method is implemented and available only for \code{FEMbasis} objects created on planar mesh (\code{MESH2D}) objects.
 #' @usage smooth.FEM.PDE.sv.basis(locations = NULL, observations, FEMbasis, 
 #'  lambda, PDE_parameters, covariates = NULL, BC = NULL, GCV = FALSE, 
 #'  CPP_CODE = TRUE)
@@ -428,7 +435,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
 }
 
 
-getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, CPP_CODE = FALSE,ndim,mydim)
+getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, incidence_matrix, areal_data, CPP_CODE = FALSE, ndim, mydim)
 {
   loc_nodes = NULL
   fnhat = NULL
@@ -450,11 +457,11 @@ getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, CPP_
       betahat[,i] = as.vector(lm.fit(covariates,as.vector(observations-fnhat[,i]))$coefficients)
   }
   
- return(betahat)
+  return(betahat)
 }
 
 
-getGCV<-function(locations, observations, fit.FEM, covariates = NULL, edf,ndim,mydim)
+getGCV<-function(locations, observations, fit.FEM, covariates = NULL, incidence_matrix, areal_data, edf, ndim, mydim)
 {
   loc_nodes = NULL
   fnhat = NULL
@@ -487,7 +494,7 @@ getGCV<-function(locations, observations, fit.FEM, covariates = NULL, edf,ndim,m
   np = length(loc_nodes)
   
   stderr2 = numeric(length(edf))
-  GCV       = numeric(length(edf))
+  GCV = numeric(length(edf))
   
   zhat <- as.matrix(zhat)
   
