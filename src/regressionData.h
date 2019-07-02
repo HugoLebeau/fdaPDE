@@ -27,6 +27,11 @@ class  RegressionData{
 		UInt n_;
 		UInt p_;
 
+		//Areal data
+		MatrixXi incidenceMatrix_;
+		UInt nRegions_;
+		bool arealData_;
+
 		//Other parameters
 		UInt order_;
 		std::vector<Real> lambda_;
@@ -44,6 +49,7 @@ class  RegressionData{
 		void setObservations(SEXP Robservations);
 		void setCovariates(SEXP Rcovariates);
 		void setNrealizations(SEXP Rnrealizations);
+		void setIncidenceMatrix(SEXP RincidenceMatrix);
 		#endif
 
 	public:
@@ -80,25 +86,30 @@ class  RegressionData{
 
 		#ifdef R_VERSION_
 		explicit RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-				   SEXP RBCIndices, SEXP RBCValues, SEXP DOF,SEXP RGCVmethod, SEXP Rnrealizations);
+								SEXP RincidenceMatrix, SEXP RarealData, SEXP RBCIndices, SEXP RBCValues, SEXP DOF,
+								SEXP RGCVmethod, SEXP Rnrealizations);
 		#endif
 
-		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates , std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
+		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates, MatrixXi& incidenceMatrix, bool arealData, std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
 
 
 		void printObservations(std::ostream & out) const;
 		void printCovariates(std::ostream & out) const;
 		void printLocations(std::ostream & out) const;
+		void printIncidenceMatrix(std::ostream & out) const;
 
 		//! A method returning a reference to the observations vector
 		inline VectorXr const & getObservations() const {return observations_;}
 		//! A method returning a reference to the design matrix
 		inline MatrixXr const & getCovariates() const {return covariates_;}
+		//! A method returning a reference to the incidence matrix
+		inline MatrixXi const & getIncidenceMatrix() const {return incidenceMatrix_;}
 		//! A method returning the number of observations
 		inline UInt const getNumberofObservations() const {return observations_.size();}
 		//! A method returning the locations of the observations
 		inline std::vector<Point> const & getLocations() const {return locations_;}
 		inline bool isLocationsByNodes() const {return locations_by_nodes_;}
+		inline bool isArealData() const {return arealData_;}
 		inline bool computeDOF() const {return DOF_;}
 		inline std::vector<UInt> const & getObservationsIndices() const {return observations_indices_;}
 		//! A method returning the the penalization term
