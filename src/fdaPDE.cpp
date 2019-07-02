@@ -192,10 +192,11 @@ extern "C" {
 	\return R-vector containg the coefficients of the solution
 */
 
-SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim, SEXP Rlambda,
-				   SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
+SEXP regression_Laplace(SEXP Rlocations, SEXP Robservations, SEXP Rmesh, SEXP Rorder,SEXP Rmydim, SEXP Rndim,
+					SEXP Rlambda, SEXP Rcovariates, SEXP incidenceMatrix, SEXP arealData, SEXP RBCIndices,
+					SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations)
 {
-    //Set input data    
+    //Set input data
 	RegressionData regressionData(Rlocations, Robservations, Rorder, Rlambda, Rcovariates, RBCIndices, RBCValues, DOF, RGCVmethod, Rnrealizations);
 	
 	UInt mydim=INTEGER(Rmydim)[0];
