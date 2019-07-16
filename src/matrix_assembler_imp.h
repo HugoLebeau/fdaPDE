@@ -30,12 +30,11 @@ void Assembler::operKernel(EOExpr<A> oper,const MeshHandler<ORDER,2,2>& mesh,
 
 				for(int l = 0;l < Integrator::NNODES; l++)
 				{
-					s += oper(fe,i,j,l) * fe.getDet() * fe.getAreaReference()* Integrator::WEIGHTS[l];
+					s += oper(fe,i,j,l) * fe.getDet() * fe.getAreaReference() * Integrator::WEIGHTS[l];
 				}
 			  triplets.push_back(coeff(identifiers[i],identifiers[j],s));
 			}
 		}
-
 	}
 
   	UInt nnodes = mesh.num_nodes();

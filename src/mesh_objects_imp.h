@@ -311,10 +311,10 @@ void Element<NNODES,3,3>::computeProperties()
 	
 	
 	Eigen::Matrix<Real,4,4> m;
-	m(0,0) = 1;			
-	m(1,0) = 1;			
-	m(2,0) = 1;			
-	m(3,0) = 1;			
+	m(0,0) = 1;
+	m(0,1) = 1;
+	m(0,2) = 1;
+	m(0,3) = 1;
 	m(1,0) = t[0][0];			
 	m(1,1) = t[1][0];			
 	m(1,2) = t[2][0];			

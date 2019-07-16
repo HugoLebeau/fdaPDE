@@ -110,13 +110,13 @@ class Element : public Identifier {
  *  The first three nodes represent the vertices, the others the internal nodes,
  *  following this enumeration: !IMPORTANT! different from Sangalli code!
  *
- * 		        	3
- * 			       *
- * 		     /	     \
- * 		  5 *	        * 4
- * 		  /	           \
- * 		 *______*______ *
- * 		1	      6	      2
+ * 		       3
+ * 			   *
+ * 		     /   \
+ * 		  5 *	   * 4
+ * 		  /	        \
+ * 		 *_____*_____*
+ * 		1	   6	  2
 */
 template <UInt NNODES>
 class Element<NNODES,2,2> : public Identifier {
@@ -156,7 +156,7 @@ public:
 	      \return a Real value representing the area of the triangle from which we updated the element
 	      \sa  updateElement(Element<Integrator::NNODES> t)
 	    */
-	Real getArea() const {return (0.5 * detJ_);}
+	Real getArea() const {return (std::abs(detJ_)/2);}
 
 	Eigen::Matrix<Real,3,1> getBaryCoordinates(const Point& point) const;
 
@@ -212,13 +212,13 @@ const int Element<NNODES,2,2>::myDim;
  *  The first three nodes represent the vertices, the others the internal nodes,
  *  following this enumeration: !IMPORTANT! different from Sangalli code!
  *
- * 			       3
- * 			       *
- * 		     /	    \
- * 		  5 *	       * 4
- * 		  /	          \
- * 		 *______*______*
- * 		1	      6	      2
+ * 			   3
+ * 			   *
+ * 		     /   \
+ * 		  5 *	   * 4
+ * 		  /	        \
+ * 		 *_____*_____*
+ * 		1	   6	  2
 */
 
 
@@ -254,8 +254,7 @@ public:
 	Real getDetJ() const {return detJ_;}
 	const Eigen::Matrix<Real,3,2>& getM_J() const {return M_J_;}
 	const Eigen::Matrix<Real,2,2>& getMetric() const {return metric_;} //inv(MJ^t*MJ)
-	Real getArea() const {return (std::sqrt(detJ_)); //sqrt(det(MJ^t*MJ))
-				};
+	Real getArea() const {return (std::sqrt(detJ_)/2);} //sqrt(det(MJ^t*MJ))
 
 	Eigen::Matrix<Real,3,1> getBaryCoordinates(const Point& point) const; //! DA VEDERE
 
@@ -372,7 +371,6 @@ inline Real evaluate_point<3,2,2>(const Element<3,2,2>& t, const Point& point, c
 {
 	Eigen::Matrix<Real,3,1> bary_coeff = t.getBaryCoordinates(point);
 	//std::cout<< "B-coord: "<<bary_coeff<<std::endl;
-
 	return(coefficients.dot(bary_coeff));
 }
 
@@ -380,40 +378,38 @@ template <>
 inline Real evaluate_point<6,2,2>(const Element<6,2,2>& t, const Point& point, const Eigen::Matrix<Real,6,1>& coefficients)
 {
 	Eigen::Matrix<Real,3,1> bary_coeff = t.getBaryCoordinates(point);
-	return( coefficients[0]*(2*bary_coeff[0]*bary_coeff[0]- bary_coeff[0]) +
+	return( coefficients[0]*(2*bary_coeff[0]*bary_coeff[0] - bary_coeff[0]) +
             coefficients[1]*(2*bary_coeff[1]*bary_coeff[1] - bary_coeff[1]) +
             coefficients[2]*(2*bary_coeff[2]*bary_coeff[2] - bary_coeff[2]) +
-            coefficients[3]*(4*bary_coeff[1]* bary_coeff[2])    +
-            coefficients[4]*(4*bary_coeff[2]* bary_coeff[0])    +
+            coefficients[3]*(4*bary_coeff[1]* bary_coeff[2]) +
+            coefficients[4]*(4*bary_coeff[2]* bary_coeff[0]) +
             coefficients[5]*(4*bary_coeff[0]* bary_coeff[1]) );
-
 }
 
 
 
 //! in this case, the implementation is not as trivial
-// first solve the linear sistem (p-p0)=(p1-p0)*alpha + (p2-p0)*beta + N*gamma
+// first solve the linear system (p-p0) = (p1-p0)*alpha + (p2-p0)*beta + N*gamma
 // where p0,p1,p2 are the vertices of the triangle, p is the point
 // (observe that, if the point is inside the triangle, gamma=0)
-// then the solution u(p)=u(p0)+alpa*(u(p1)-u(p0)+beta*(u(p2)-u(p0))
+// then the solution u(p) = u(p0) + alpa*(u(p1) - u(p0) + beta*(u(p2)-u(p0))
 template <>
 inline Real evaluate_point<3,2,3>(const Element<3,2,3>& t, const Point& point, const Eigen::Matrix<Real,3,1>& coefficients)
 {
-	Eigen::Matrix<Real,3,1> bary_coeff=t.getBaryCoordinates(point);
+	Eigen::Matrix<Real,3,1> bary_coeff = t.getBaryCoordinates(point);
 	return(coefficients.dot(bary_coeff));
-
 }
 
 template <>
 inline Real evaluate_point<6,2,3>(const Element<6,2,3>& t, const Point& point, const Eigen::Matrix<Real,6,1>& coefficients)
 {
 	Eigen::Matrix<Real,3,1> bary_coeff = t.getBaryCoordinates(point);
-	return( coefficients[0]*(2*bary_coeff[0]*bary_coeff[0]- bary_coeff[0]) +
+	return( coefficients[0]*(2*bary_coeff[0]*bary_coeff[0] - bary_coeff[0]) +
             coefficients[1]*(2*bary_coeff[1]*bary_coeff[1] - bary_coeff[1]) +
             coefficients[2]*(2*bary_coeff[2]*bary_coeff[2] - bary_coeff[2]) +
-            coefficients[3]*(4*bary_coeff[1]* bary_coeff[2])    +
-            coefficients[4]*(4*bary_coeff[2]* bary_coeff[0])    +
-            coefficients[5]*(4*bary_coeff[0]* bary_coeff[1]) );
+            coefficients[3]*(4*bary_coeff[1]*bary_coeff[2]) +
+            coefficients[4]*(4*bary_coeff[2]*bary_coeff[0]) +
+            coefficients[5]*(4*bary_coeff[0]*bary_coeff[1]) );
 }
 
 //! Implementation for tetrahedrons
@@ -423,8 +419,6 @@ inline Real evaluate_point<4,3,3>(const Element<4,3,3>& t, const Point& point, c
 	Eigen::Matrix<Real,4,1> bary_coeff=t.getBaryCoordinates(point);
 	return(coefficients.dot(bary_coeff));
 }
-
-
 
 template <UInt Nodes,UInt mydim, UInt ndim>
 inline Eigen::Matrix<Real,ndim,1> evaluate_der_point(const Element<Nodes,mydim,ndim>& t, const Point& point, const Eigen::Matrix<Real,Nodes,1>& coefficients)

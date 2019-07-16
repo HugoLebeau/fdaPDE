@@ -346,9 +346,9 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeDegreesOfFreedomExact
 	{
 		auto k = this->fpcaData_.getObservationsIndices();
 		DMUMPS_STRUC_C id;
-		int myid, ierr;
-        int argc=0;
-        char ** argv= NULL;
+		//int myid, ierr;
+        //int argc=0;
+        //char ** argv= NULL;
         //MPI_Init(&argc,&argv);
 		//ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
