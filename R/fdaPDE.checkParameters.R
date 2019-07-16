@@ -1,4 +1,4 @@
-checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL,GCVmethod = 2,nrealizations = 100)
+checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL,GCVmethod = 2,nrealizations = 100)
 {
   #################### Parameter Check #########################
   if(!is.null(locations))
@@ -9,23 +9,22 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lam
       stop("Missing values not admitted in 'observations' when 'locations' are specified.")
   }
   
-  if (is.null(observations)) 
+  if (is.null(observations))
     stop("observations required;  is NULL.")
   
-  if (is.null(FEMbasis)) 
+  if (is.null(FEMbasis))
     stop("FEMbasis required;  is NULL.")
   if(class(FEMbasis)!= "FEMbasis")
     stop("'FEMbasis' is not class 'FEMbasis'")
   
-  if (is.null(lambda)) 
+  if (is.null(lambda))
     stop("lambda required;  is NULL.")
   
+  if (!is.null(locations) && !is.null(incidence_matrix))
+    stop("Both 'locations' and 'incidence_matrix' are given. In case of pointwise data, set 'incidence_matrix to NULL. In case of areal data, set 'locations' to NULL.")
+
   if (any(incidence_matrix!=0 & incidence_matrix!=1))
     stop("Value different than 0 or 1 in 'incidence_matrix'.")
-  if (!is.logical(areal_data))
-    stop("'areal_data' is not logical.")
-  if (areal_data && is.null(incidence_matrix))
-    stop("incidence_matrix required; is NULL.")
 
   if(!is.null(BC))
   {
@@ -82,7 +81,7 @@ checkSmoothingParameters<-function(locations = NULL, observations, FEMbasis, lam
     stop("nrealizations must be a positive integer")
 }
 
-checkSmoothingParametersSize<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL, ndim, mydim)
+checkSmoothingParametersSize<-function(locations = NULL, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, PDE_parameters_constant = NULL, PDE_parameters_func = NULL, ndim, mydim)
 {
   #################### Parameter Check #########################
   if(ncol(observations) != 1)
@@ -115,14 +114,19 @@ checkSmoothingParametersSize<-function(locations = NULL, observations, FEMbasis,
     if(nrow(covariates) != nrow(observations))
       stop("'covariates' and 'observations' have incompatible size;")
   }
-
-  if (class(FEMbasis$mesh) == 'MESH2D' && ncol(incidence_matrix) != nrow(FEMbasis$mesh$triangles))
-    stop("'incidence_matrix' must be a ntriangles-columns matrix;")
-  else if (class(FEMbasis$mesh) == 'MESH.2.5D' && ncol(incidence_matrix) != FEMbasis$mesh$ntriangles)
-    stop("'incidence_matrix' must be a ntriangles-columns matrix;")
-  else if (class(FEMbasis$mesh) == 'MESH.3D' && ncol(incidence_matrix) != FEMbasis$mesh$ntetrahedrons)
-    stop("'incidence_matrix' must be a ntetrahedrons-columns matrix;")
   
+  if (!is.null(incidence_matrix))
+  {
+    if (nrow(incidence_matrix) != nrow(observations))
+      stop("'incidence_matrix' and 'observations' have incompatible size;")
+    if (class(FEMbasis$mesh) == 'MESH2D' && ncol(incidence_matrix) != nrow(FEMbasis$mesh$triangles))
+      stop("'incidence_matrix' must be a ntriangles-columns matrix;")
+    else if (class(FEMbasis$mesh) == 'MESH.2.5D' && ncol(incidence_matrix) != FEMbasis$mesh$ntriangles)
+      stop("'incidence_matrix' must be a ntriangles-columns matrix;")
+    else if (class(FEMbasis$mesh) == 'MESH.3D' && ncol(incidence_matrix) != FEMbasis$mesh$ntetrahedrons)
+      stop("'incidence_matrix' must be a ntetrahedrons-columns matrix;") 
+  }
+
   if(!is.null(BC))
   {
     if(ncol(BC$BC_indices) != 1)

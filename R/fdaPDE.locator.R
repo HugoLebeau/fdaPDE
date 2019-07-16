@@ -11,42 +11,49 @@
 #' @references 
 #'  Devillers, O. et al. 2001. Walking in a Triangulation, Proceedings of the Seventeenth Annual Symposium on Computational Geometry
 
-eval.FEM <- function(FEM, locations, CPP_CODE = TRUE)
+eval.FEM <- function(FEM, locations, incidence_matrix = NULL, CPP_CODE = TRUE)
 {
-  if (is.null(FEM)) 
+  if (is.null(FEM))
     stop("FEM required;  is NULL.")
   if(class(FEM) != "FEM")
     stop("'FEM' is not of class 'FEM'")
-  if (is.null(locations)) 
-    stop("locations required;  is NULL.")
+  if (is.null(locations) && is.null(incidence_matrix)) 
+    stop("'locations' NOR 'incidence_matrix' required;  both are NULL.")
+  if (!is.null(locations) && !is.null(incidence_matrix))
+    stop("'locations' NOR 'incidence_matrix' required; both are given.")
   if (is.null(CPP_CODE)) 
     stop("CPP_CODE required;  is NULL.")
   if(!is.logical(CPP_CODE))
     stop("'CPP_CODE' is not logical")
   
-  locations = as.matrix(locations)
+  if (is.null(locations))
+    locations <- matrix(nrow = 0, ncol = 2)
+  else
+    incidence_matrix <- matrix(nrow = 0, ncol = 1)
   
-  res = NULL
+  res <- NULL
   
   if(class(FEM$FEMbasis$mesh)=='MESH2D'){
     ndim = 2
     mydim = 2
-	  if(CPP_CODE == FALSE)
+    if(CPP_CODE==FALSE && !is.null(incidence_matrix))
+    {
+      stop("If you are using areal data, please set CPP_CODE = TRUE.")
+    }else if(CPP_CODE == FALSE)
 	  {
 	    res = R_eval.FEM(FEM, locations)
 	  }else{ 
-	    res = CPP_eval.FEM(FEM, locations, TRUE, ndim, mydim)
+	    res = CPP_eval.FEM(FEM, locations, incidence_matrix, TRUE, ndim, mydim)
 	  }
   }else if(class(FEM$FEMbasis$mesh)=='MESH.2.5D'){
       ndim = 3
       mydim = 2
-  	    res = CPP_eval.manifold.FEM(FEM, locations, TRUE, ndim, mydim)
+  	  res = CPP_eval.manifold.FEM(FEM, locations, incidence_matrix, TRUE, ndim, mydim)
   }else if(class(FEM$FEMbasis$mesh)=='MESH.3D'){
       ndim = 3
       mydim = 3
-  	    res = CPP_eval.volume.FEM(FEM, locations, TRUE, ndim, mydim)
-  	  }
-  	  
+  	  res = CPP_eval.volume.FEM(FEM, locations, incidence_matrix, TRUE, ndim, mydim)
+  }
   
   return(as.matrix(res))
 }

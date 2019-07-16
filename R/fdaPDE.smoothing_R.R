@@ -372,7 +372,7 @@ R_smooth.FEM.basis = function(locations, observations, FEMbasis, lambda, covaria
 #' 
 #' @param locations A 2-columns matrix with the spatial locations where the bases should be evaluated.
 #' @param FEMbasis An \code{FEMbasis} object representing the Finite Element basis; See \link{create.FEM.basis}.
-#' @param nderivs A vector of lenght 2 specifying the order of the partial derivatives of the bases to be evaluated. The vectors' entries can
+#' @param nderivs A vector of length 2 specifying the order of the partial derivatives of the bases to be evaluated. The vectors' entries can
 #' be 0,1 or 2, where 0 indicates that only the basis functions, and not their derivatives, should be evaluated.
 #' @return 
 #' A matrix of basis function values. Each row indicates the location where the evaluation has been taken, the column indicates the 
@@ -389,7 +389,7 @@ R_eval.FEM.basis <- function(FEMbasis, locations, nderivs = matrix(0,1,2))
     stop('NDERIVS not of length 2.')
   }
   
-  if(sum(nderivs)>2)
+  if(any(nderivs>2))
   {
     stop('Maximum derivative order is greater than two.')
   }

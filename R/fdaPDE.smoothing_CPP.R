@@ -1,6 +1,6 @@
 #dyn.load("../Release/fdaPDE.so")
 
-CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covariates = NULL, incidence_matrix = NULL, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
 {
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   ##TO BE CHANGED SOON: LOW PERFORMANCES, IMPLIES COPY OF PARAMETERS
@@ -51,7 +51,6 @@ CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covari
   storage.mode(covariates) <- "double"
   incidence_matrix <- as.matrix(incidence_matrix)
   storage.mode(incidence_matrix) <- "integer"
-  storage.mode(areal_data) <- "logical"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
   storage.mode(lambda) <- "double"
@@ -65,14 +64,13 @@ CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covari
   storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
-  bigsol <- .Call("regression_Laplace", locations, observations, FEMbasis$mesh,
-                  FEMbasis$order, mydim, ndim, lambda, covariates, incidence_matrix,
-                  areal_data, BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
-                  PACKAGE = "fdaPDE")
+  bigsol <- .Call("regression_Laplace", locations, observations, FEMbasis$mesh, FEMbasis$order,
+                  mydim, ndim, lambda, covariates, incidence_matrix, BC$BC_indices, BC$BC_values,
+                  GCV,GCVmethod, nrealizations, PACKAGE = "fdaPDE")
   return(bigsol)
 }
 
-CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
 {
 
   # Indexes in C++ starts from 0, in R from 1, opportune transformation  
@@ -125,7 +123,6 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   storage.mode(covariates) <- "double"
   incidence_matrix <- as.matrix(incidence_matrix)
   storage.mode(incidence_matrix) <- "integer"
-  storage.mode(areal_data) <- "logical"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
   storage.mode(lambda) <- "double"
@@ -143,11 +140,11 @@ CPP_smooth.FEM.PDE.basis<-function(locations, observations, FEMbasis, lambda, PD
   ## Call C++ function
   bigsol <- .Call("regression_PDE", locations, observations, FEMbasis$mesh, FEMbasis$order, mydim, ndim,
                   lambda, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, covariates, incidence_matrix,
-                  areal_data, BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations, PACKAGE = "fdaPDE")
+                  BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations, PACKAGE = "fdaPDE")
   return(bigsol)
 }
 
-CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, areal_data = FALSE, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, ndim, mydim, BC = NULL, GCV,GCVmethod = 2, nrealizations = 100)
 {
   
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
@@ -207,7 +204,6 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda,
   storage.mode(covariates) <- "double"
   incidence_matrix <- as.matrix(incidence_matrix)
   storage.mode(incidence_matrix) <- "integer"
-  storage.mode(areal_data) <- "logical"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
   storage.mode(lambda) <- "double"
@@ -226,12 +222,12 @@ CPP_smooth.FEM.PDE.sv.basis<-function(locations, observations, FEMbasis, lambda,
   ## Call C++ function
   bigsol <- .Call("regression_PDE_space_varying", locations, observations, FEMbasis$mesh, FEMbasis$order,
                   mydim, ndim, lambda, PDE_param_eval$K, PDE_param_eval$b, PDE_param_eval$c, PDE_param_eval$u,
-                  covariates, incidence_matrix, areal_data, BC$BC_indices, BC$BC_values, GCV,GCVmethod,
-                  nrealizations, PACKAGE = "fdaPDE")
+                  covariates, incidence_matrix, BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
+                  PACKAGE = "fdaPDE")
   return(bigsol)
 }
 
-CPP_eval.FEM = function(FEM, locations, redundancy, ndim, mydim)
+CPP_eval.FEM = function(FEM, locations, incidence_matrix, redundancy, ndim, mydim)
 {
   FEMbasis = FEM$FEMbasis
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
@@ -241,35 +237,28 @@ CPP_eval.FEM = function(FEM, locations, redundancy, ndim, mydim)
   FEMbasis$mesh$neighbors[FEMbasis$mesh$neighbors != -1] = FEMbasis$mesh$neighbors[FEMbasis$mesh$neighbors != -1] - 1
   
   # Imposing types, this is necessary for correct reading from C++
-  ## Set propr type for correct C++ reading
+  ## Set proper type for correct C++ reading
   locations <- as.matrix(locations)
   storage.mode(locations) <- "double"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
   storage.mode(FEMbasis$mesh$nodes) <- "double"
   storage.mode(FEMbasis$mesh$triangles) <- "integer"
   storage.mode(FEMbasis$mesh$edges) <- "integer"
   storage.mode(FEMbasis$mesh$neighbors) <- "integer"
   storage.mode(FEMbasis$order) <- "integer"
-  coeff = as.matrix(FEM$coeff)
+  coeff <- as.matrix(FEM$coeff)
   storage.mode(coeff) <- "double"
-  storage.mode(ndim)<- "integer"
-  storage.mode(mydim)<- "integer"
+  storage.mode(ndim) <- "integer"
+  storage.mode(mydim) <- "integer"
   storage.mode(locations) <- "double"
   storage.mode(redundancy) <- "integer"
   
   #Calling the C++ function "eval_FEM_fd" in RPDE_interface.cpp
   evalmat = matrix(0,nrow(locations),ncol(coeff))
-
-  if(ndim==2){
-	z=matrix(0,nrow(locations),1)
- 	for (i in 1:ncol(coeff)){
-    		evalmat[,i] <- .Call("eval_FEM_fd", FEMbasis$mesh, locations[,1], 
-    				locations[,2],z, coeff[,i], FEMbasis$order, redundancy, 				mydim, ndim, package = "fdaPDE")
-  	}
-  }else{
-
-  	evalmat[,i] <- .Call("eval_FEM_fd", FEMbasis$mesh, locations[,1], locations[,2], 				locations[,3], coeff[,i], FEMbasis$order, redundancy, mydim, ndim,
-                   	package = "fdaPDE")
-
+  for (i in 1:ncol(coeff)){
+    evalmat[,i] <- .Call("eval_FEM_fd", FEMbasis$mesh, locations, incidence_matrix, coeff[,i],
+                          FEMbasis$order, redundancy, mydim, ndim, package = "fdaPDE")
   }
 
   #Returning the evaluation matrix
@@ -413,6 +402,7 @@ CPP_get.FEM.PDE.Matrix<-function(FEMbasis, PDE_parameters)
   
   covariates<-matrix(nrow = 0, ncol = 1)
   locations<-matrix(nrow = 0, ncol = 2)
+  incidence_matrix<-matrix(nrow = 0, ncol = 1)
   BC$BC_indices<-vector(length=0)
   BC$BC_values<-vector(length=0)
   lambda = 0
@@ -429,26 +419,28 @@ CPP_get.FEM.PDE.Matrix<-function(FEMbasis, PDE_parameters)
   storage.mode(FEMbasis$mesh$edges) <- "integer"
   storage.mode(FEMbasis$mesh$neighbors) <- "integer"
   storage.mode(FEMbasis$order) <- "integer"
-  covariates = as.matrix(covariates)
+  covariates <- as.matrix(covariates)
   storage.mode(covariates) <- "double"
-  storage.mode(lambda)<- "double"
-  storage.mode(BC$BC_indices)<- "integer"
-  storage.mode(BC$BC_values)<-"double"
-  storage.mode(GCV)<-"integer"
-  storage.mode(ndim)<-"integer"
-  storage.mode(mydim)<-"integer"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
+  storage.mode(lambda) <- "double"
+  storage.mode(BC$BC_indices) <- "integer"
+  storage.mode(BC$BC_values) <- "double"
+  storage.mode(GCV) <- "integer"
+  storage.mode(ndim) <- "integer"
+  storage.mode(mydim) <- "integer"
   
-  storage.mode(PDE_parameters$K)<-"double"
-  storage.mode(PDE_parameters$b)<-"double"
-  storage.mode(PDE_parameters$c)<-"double"
+  storage.mode(PDE_parameters$K) <- "double"
+  storage.mode(PDE_parameters$b) <- "double"
+  storage.mode(PDE_parameters$c) <- "double"
   
-  storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
   triplets <- .Call("get_FEM_PDE_matrix", locations, observations, FEMbasis$mesh, 
                   FEMbasis$order,mydim, ndim, lambda, PDE_parameters$K, PDE_parameters$b, PDE_parameters$c, covariates,
-                  BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
+                  incidence_matrix, BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
                   PACKAGE = "fdaPDE")
 
   A = sparseMatrix(i = triplets[[1]][,1], j=triplets[[1]][,2], x = triplets[[2]], dims = c(nrow(FEMbasis$mesh$nodes),nrow(FEMbasis$mesh$nodes)))
@@ -476,6 +468,7 @@ CPP_get.FEM.PDE.sv.Matrix<-function(FEMbasis, PDE_parameters)
   
   covariates<-matrix(nrow = 0, ncol = 1)
   locations<-matrix(nrow = 0, ncol = 2)
+  incidence_matrix<-matrix(nrow = 0, ncol = 1)
   BC$BC_indices<-vector(length=0)
   BC$BC_values<-vector(length=0)
   lambda = 0
@@ -498,27 +491,29 @@ CPP_get.FEM.PDE.sv.Matrix<-function(FEMbasis, PDE_parameters)
   storage.mode(FEMbasis$mesh$edges) <- "integer"
   storage.mode(FEMbasis$mesh$neighbors) <- "integer"
   storage.mode(FEMbasis$order) <- "integer"
-  covariates = as.matrix(covariates)
+  covariates <- as.matrix(covariates)
   storage.mode(covariates) <- "double"
-  storage.mode(lambda)<- "double"
-  storage.mode(BC$BC_indices)<- "integer"
-  storage.mode(BC$BC_values)<-"double"
-  storage.mode(GCV)<-"integer"
-  storage.mode(ndim)<-"integer"
-  storage.mode(mydim)<-"integer"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
+  storage.mode(lambda) <- "double"
+  storage.mode(BC$BC_indices) <- "integer"
+  storage.mode(BC$BC_values) <- "double"
+  storage.mode(GCV) <- "integer"
+  storage.mode(ndim) <- "integer"
+  storage.mode(mydim) <- "integer"
   
-  storage.mode(PDE_param_eval$K)<-"double"
-  storage.mode(PDE_param_eval$b)<-"double"
-  storage.mode(PDE_param_eval$c)<-"double"
-  storage.mode(PDE_param_eval$u)<-"double"
+  storage.mode(PDE_param_eval$K) <- "double"
+  storage.mode(PDE_param_eval$b) <- "double"
+  storage.mode(PDE_param_eval$c) <- "double"
+  storage.mode(PDE_param_eval$u) <- "double"
   
-  storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
   triplets <- .Call("get_FEM_PDE_space_varying_matrix", locations, observations, FEMbasis$mesh, 
                   FEMbasis$order,mydim, ndim, lambda, PDE_param_eval$K, PDE_param_eval$b, PDE_param_eval$c, PDE_param_eval$u, covariates,
-                  BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
+                  incidence_matrix, BC$BC_indices, BC$BC_values, GCV,GCVmethod, nrealizations,
                   PACKAGE = "fdaPDE")
   
   A = sparseMatrix(i = triplets[[1]][,1], j=triplets[[1]][,2], x = triplets[[2]], dims = c(nrow(FEMbasis$mesh$nodes),nrow(FEMbasis$mesh$nodes)))
