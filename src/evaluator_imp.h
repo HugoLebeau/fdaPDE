@@ -2,9 +2,8 @@
 #define __EVALUATOR_IMP_HPP__
 
 template <UInt ORDER>
-void Evaluator<ORDER,2,2>::eval(Real* X, Real *Y, UInt length, const Real *coef, UInt order, bool redundancy, Real* result, std::vector<bool>& isinside)
+void Evaluator<ORDER,2,2>::eval(Real* X, Real *Y, UInt length, const Real *coef, bool redundancy, Real* result, std::vector<bool>& isinside)
 {
-
 	constexpr UInt Nodes = 3*ORDER;
 	Element<Nodes,2,2> current_element;
 	// std::vector<Triangle<3*ORDER> > starting_triangles; Problem with alignment not solved
@@ -48,11 +47,10 @@ void Evaluator<ORDER,2,2>::eval(Real* X, Real *Y, UInt length, const Real *coef,
 		}
 	}
 }
-;
 
 
 template <UInt ORDER>
-void Evaluator<ORDER,2,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const Real *coef, UInt order, bool redundancy, Real* result, std::vector<bool>& isinside)
+void Evaluator<ORDER,2,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const Real *coef, bool redundancy, Real* result, std::vector<bool>& isinside)
 {
 
 	constexpr UInt Nodes = 3*ORDER;
@@ -89,7 +87,7 @@ void Evaluator<ORDER,2,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const R
 
 
 template <UInt ORDER>
-void Evaluator<ORDER,3,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const Real *coef, UInt order, bool redundancy, Real* result, std::vector<bool>& isinside)
+void Evaluator<ORDER,3,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const Real *coef, bool redundancy, Real* result, std::vector<bool>& isinside)
 {
 
 	constexpr UInt Nodes = 6*ORDER-2;
@@ -121,6 +119,108 @@ void Evaluator<ORDER,3,3>::eval(Real* X, Real *Y,  Real *Z, UInt length, const R
 			//std::cout<<"result = " <<result[i]<<"\n";
 			starting_element = current_element;
 		}
+	}
+}
+
+
+template <UInt ORDER>
+void Evaluator<ORDER, 2, 2>::integrate(UInt** incidenceMatrix, UInt nRegions, UInt nElements, const Real *coef, Real* result)
+{
+	Real Delta[nRegions];
+	Real integral[nRegions];
+	constexpr UInt Nodes = 3*ORDER;
+	Element<Nodes, 2, 2> current_element;
+
+	for (int region=0; region<nRegions; region++)
+	{
+		Delta[region]=0;
+		integral[region]=0;
+		for (int elem=0; elem<nElements; elem++)
+		{
+			if (incidenceMatrix[region][elem]==1) //elem is in region
+			{
+				current_element = mesh_.getElement(elem);
+				Real measure = mesh_.elementMeasure(elem);
+				Delta[region] += measure;
+				// THIS IS ONLY FOR ORDER==1
+				// NOT YET IMPLEMENTED FOR ORDER==2
+				Real s = 0;
+				for (int node=0; node<Nodes; node++)
+				{
+					s+=coef[current_element[node].getId()];
+				}
+				integral[region] += measure*s/(2+1);
+			}
+		}
+		result[region]=integral[region]/Delta[region];
+	}
+}
+
+
+template <UInt ORDER>
+void Evaluator<ORDER, 2, 3>::integrate(UInt** incidenceMatrix, UInt nRegions, UInt nElements, const Real *coef, Real* result)
+{
+	Real Delta[nRegions];
+	Real integral[nRegions];
+	constexpr UInt Nodes = 3*ORDER;
+	Element<Nodes, 2, 3> current_element;
+
+	for (int region=0; region<nRegions; region++)
+	{
+		Delta[region]=0;
+		integral[region]=0;
+		for (int elem=0; elem<nElements; elem++)
+		{
+			if (incidenceMatrix[region][elem]==1) //elem is in region
+			{
+				current_element = mesh_.getElement(elem);
+				Real measure = mesh_.elementMeasure(elem);
+				Delta[region] += measure;
+				// THIS IS ONLY FOR ORDER==1
+				// NOT YET IMPLEMENTED FOR ORDER==2
+				Real s = 0;
+				for (int node=0; node<Nodes; node++)
+				{
+					s+=coef[current_element[node].getId()];
+				}
+				integral[region] += measure*s/(2+1);
+			}
+		}
+		result[region]=integral[region]/Delta[region];
+	}
+}
+
+
+template <UInt ORDER>
+void Evaluator<ORDER, 3, 3>::integrate(UInt** incidenceMatrix, UInt nRegions, UInt nElements, const Real *coef, Real* result)
+{
+	Real Delta[nRegions];
+	Real integral[nRegions];
+	constexpr UInt Nodes = 6*ORDER-2;
+	Element<Nodes, 3, 3> current_element;
+
+	for (int region=0; region<nRegions; region++)
+	{
+		Delta[region]=0;
+		integral[region]=0;
+		for (int elem=0; elem<nElements; elem++)
+		{
+			if (incidenceMatrix[region][elem]==1) //elem is in region
+			{
+				current_element = mesh_.getElement(elem);
+				Real measure = mesh_.elementMeasure(elem);
+				Delta[region] += measure;
+				// THIS IS ONLY FOR ORDER==1
+				// NOT YET IMPLEMENTED FOR ORDER==2
+				Real s = 0;
+				for (int node=0; node<Nodes; node++)
+				{
+					s+=coef[current_element[node].getId()];
+				}
+				integral[region] += measure*s/(3+1);
+			}
+		}
+		result[region]=integral[region]/Delta[region];
 	}
 }
 

@@ -83,77 +83,150 @@ SEXP eval_FEM_fd(SEXP Rmesh, SEXP RX, SEXP RY, SEXP Rcoef, SEXP Rorder, SEXP Rfa
     return(result);
 }*/
 
-SEXP eval_FEM_fd(SEXP Rmesh, SEXP RX, SEXP RY, SEXP RZ, SEXP Rcoef, SEXP Rorder, SEXP Rfast, SEXP Rmydim, SEXP Rndim)
+SEXP eval_FEM_fd(SEXP Rmesh, SEXP Rlocations, SEXP RincidenceMatrix, SEXP Rcoef, SEXP Rorder, SEXP Rfast, SEXP Rmydim, SEXP Rndim)
 {
+	int n_X = INTEGER(Rf_getAttrib(Rlocations, R_DimSymbol))[0];
+	int nRegions = INTEGER(Rf_getAttrib(RincidenceMatrix, R_DimSymbol))[0];
+	int nElements = INTEGER(Rf_getAttrib(RincidenceMatrix, R_DimSymbol))[1]; //number of triangles/tetrahedron if areal data
 	//Declare pointer to access data from C++
-
-    	double *X, *Y, *Z, *coef;
+	double *X, *Y, *Z;
+	UInt **incidenceMatrix;
+	double *coef;
 	int order,mydim,ndim;
 	bool fast;
 
-	//int n_coef 	= Rf_length(Rcoef);
-	int n_X 	= Rf_length(RX);
+    order = INTEGER(Rorder)[0];
+    fast  = INTEGER(Rfast)[0];
+    mydim = INTEGER(Rmydim)[0];
+    ndim  = INTEGER(Rndim)[0];
+
+	X = (double*) malloc(sizeof(double)*n_X);
+	Y = (double*) malloc(sizeof(double)*n_X);
+	Z = (double*) malloc(sizeof(double)*n_X);
+	incidenceMatrix = (UInt**) malloc(sizeof(UInt*)*nRegions);
 
     // Cast all computation parameters
-    X 			= REAL(RX);
-    Y 			= REAL(RY);
-    Z 			= REAL(RZ);
-    coef 		= REAL(Rcoef);
-    order 		= INTEGER(Rorder)[0];
-    fast 		= INTEGER(Rfast)[0];
-    mydim               = INTEGER(Rmydim)[0];
-    ndim                = INTEGER(Rndim)[0];
+	if (ndim==3)
+	{
+		for (int i=0; i<n_X; i++)
+		{
+			X[i] = REAL(Rlocations)[i + n_X*0];
+			Y[i] = REAL(Rlocations)[i + n_X*1];
+			Z[i] = REAL(Rlocations)[i + n_X*2];
+		}
+	}
+	else //ndim==2
+	{
+		for (int i=0; i<n_X; i++)
+		{
+			X[i] = REAL(Rlocations)[i + n_X*0];
+			Y[i] = REAL(Rlocations)[i + n_X*1];
+			Z[i] = 0;
+		}
+	}
+	for (int i=0; i<nRegions; i++)
+	{
+		incidenceMatrix[i] = (UInt*) malloc(sizeof(UInt)*nElements);
+		for (int j=0; j<nElements; j++)
+		{
+			incidenceMatrix[i][j] = REAL(RincidenceMatrix)[i+nRegions*j];
+		}
+	}
 
     SEXP result;
-	PROTECT(result=Rf_allocVector(REALSXP, n_X));
-	std::vector<bool> isinside(n_X);
-    //Set the mesh
-	//std::cout<<"Length "<<n_X<<"--X0 "<<X[0]<<"--Y0 "<<Y[0];
-    if(order == 1 && ndim == 2)
-    {
-    	MeshHandler<1,2,2> mesh(Rmesh);
-		Evaluator<1,2,2> evaluator(mesh);
-		//std::cout<<"Starting evaluation from FEMeval \n";
-		evaluator.eval(X, Y, n_X, coef, order, fast, REAL(result), isinside);
-	}
-    else if(order == 2 && mydim==2 && ndim == 2)
+
+	if (n_X>0) //pointwise data
 	{
-    	MeshHandler<2,2,2> mesh(Rmesh);
-    	Evaluator<2,2,2> evaluator(mesh);
-		  evaluator.eval(X, Y, n_X, coef, order, fast, REAL(result), isinside);
+		PROTECT(result = Rf_allocVector(REALSXP, n_X));
+		std::vector<bool> isinside(n_X);
+		//Set the mesh
+		//std::cout<<"Length "<<n_X<<"--X0 "<<X[0]<<"--Y0 "<<Y[0];
+		if(order==1 && mydim==2 && ndim==2)
+		{
+			MeshHandler<1,2,2> mesh(Rmesh);
+			Evaluator<1,2,2> evaluator(mesh);
+			//std::cout<<"Starting evaluation from FEMeval \n";
+			evaluator.eval(X, Y, n_X, coef, fast, REAL(result), isinside);
+		}
+		else if(order==2 && mydim==2 && ndim==2)
+		{
+			MeshHandler<2,2,2> mesh(Rmesh);
+			Evaluator<2,2,2> evaluator(mesh);
+			evaluator.eval(X, Y, n_X, coef, fast, REAL(result), isinside);
+		}
+		else if(order==1 && mydim==2 && ndim==3)
+		{ 
+			MeshHandler<1,2,3> mesh(Rmesh);
+			//mesh.printTriangles(std::cout);
+			//mesh.printPoints(std::cout);
+			Evaluator<1,2,3> evaluator(mesh);
+			evaluator.eval(X, Y, Z, n_X, coef, fast, REAL(result), isinside);
+		}
+		else if(order==2 && mydim==2 && ndim==3)
+		{
+			MeshHandler<2,2,3> mesh(Rmesh);
+			Evaluator<2,2,3> evaluator(mesh);
+			evaluator.eval(X, Y, Z, n_X, coef, fast, REAL(result), isinside);
+		}
+		else if(order==1 && mydim==3 && ndim==3)
+		{ 
+			MeshHandler<1,3,3> mesh(Rmesh);
+			//mesh.printTriangles(std::cout);
+			//mesh.printPoints(std::cout);
+			Evaluator<1,3,3> evaluator(mesh);
+			evaluator.eval(X, Y, Z, n_X, coef, fast, REAL(result), isinside);
+		}
+
+		for (int i=0; i<n_X; ++i)
+		{
+			if(!(isinside[i]))
+			{
+				REAL(result)[i]=NA_REAL;
+			}
+		}
 	}
-    else if(order == 2 && mydim==2 && ndim == 3)
+	else //areal data
 	{
-    	MeshHandler<2,2,3> mesh(Rmesh);
-    	Evaluator<2,2,3> evaluator(mesh);
-		  evaluator.eval(X, Y, Z, n_X, coef, order, fast, REAL(result), isinside);
+		PROTECT(result = Rf_allocVector(REALSXP, nRegions));
+		if(order==1 && mydim==2 && ndim==2)
+		{
+			MeshHandler<1,2,2> mesh(Rmesh);
+			Evaluator<1,2,2> evaluator(mesh);
+			evaluator.integrate(incidenceMatrix, nRegions, nElements, coef, REAL(result));
+		}
+		else if(order==2 && mydim==2 && ndim==2)
+		{
+			MeshHandler<2,2,2> mesh(Rmesh);
+			Evaluator<2,2,2> evaluator(mesh);
+			evaluator.integrate(incidenceMatrix, nRegions, nElements, coef, REAL(result));
+		}
+		else if(order==1 && mydim==2 && ndim==3)
+		{ 
+			MeshHandler<1,2,3> mesh(Rmesh);
+			Evaluator<1,2,3> evaluator(mesh);
+			evaluator.integrate(incidenceMatrix, nRegions, nElements, coef, REAL(result));
+		}
+		else if(order==2 && mydim==2 && ndim==3)
+		{
+			MeshHandler<2,2,3> mesh(Rmesh);
+			Evaluator<2,2,3> evaluator(mesh);
+			evaluator.integrate(incidenceMatrix, nRegions, nElements, coef, REAL(result));
+		}
+		else if(order==1 && mydim==3 && ndim==3)
+		{ 
+			MeshHandler<1,3,3> mesh(Rmesh);
+			Evaluator<1,3,3> evaluator(mesh);
+			evaluator.integrate(incidenceMatrix, nRegions, nElements, coef, REAL(result));
+		}
 	}
-    else if(order == 1 && mydim==2 && ndim == 3)
-	{ 
-    	MeshHandler<1,2,3> mesh(Rmesh);
-      //mesh.printTriangles(std::cout);
-      //mesh.printPoints(std::cout);
-    	Evaluator<1,2,3> evaluator(mesh);
-		  evaluator.eval(X, Y, Z, n_X, coef, order, fast, REAL(result), isinside);
+
+	free(X); free(Y); free(Z);
+	for (int i=0; i<nRegions; i++)
+	{
+		free(incidenceMatrix[i]);
 	}
+	free(incidenceMatrix);
 	
-    else if(order == 1 && mydim==3 && ndim == 3)
-	{ 
-    	MeshHandler<1,3,3> mesh(Rmesh);
-      //mesh.printTriangles(std::cout);
-      //mesh.printPoints(std::cout);
-    	Evaluator<1,3,3> evaluator(mesh);
-		  evaluator.eval(X, Y, Z, n_X, coef, order, fast, REAL(result), isinside);
-	}
-
-    for (int i=0; i<n_X;++i)
-    {
-    	if(!(isinside[i]))
-    	{
-    		REAL(result)[i]=NA_REAL;
-    	}
-
-    }
 
 	UNPROTECT(1);
     // result list
