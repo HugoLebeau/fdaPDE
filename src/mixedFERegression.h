@@ -27,11 +27,12 @@ protected:
 	SpMat R0_;	// South-east block of system matrix A_
 	SpMat psi_;
 	MatrixXr U_;	// psi^T*W padded with zeros
+	VectorXr z_; // Observations
 		
 		
 	Eigen::SparseLU<SpMat> Adec_; // Stores the factorization of A_
 	Eigen::PartialPivLU<MatrixXr> Gdec_;	// Stores factorization of G =  C + [V * A^-1 * U]
-	Eigen::PartialPivLU<MatrixXr> WTWinv_;	// Stores the factorization of W^T * W
+	Eigen::PartialPivLU<MatrixXr> WTW_;	// Stores the factorization of W^T * W
 	bool isWTWfactorized_;
 	bool isRcomputed_;
 	MatrixXr R_; //R1 ^T * R0^-1 * R1
@@ -48,11 +49,11 @@ protected:
 	MatrixXr Q_;
  	MatrixXr H_;
 	
-	
+	VectorXr Delta_; //Delta_.asDiagonal() = diag(|D_1|,...,|D_N|)
 
 	SpMat _coeffmatrix;        //!A Eigen::VectorXr: Stores the system right hand side.
 	VectorXr _b;                     //!A Eigen::VectorXr: Stores the system right hand side.
-	std::vector<VectorXr> _solution; //!A Eigen::VectorXr : Stores the system solution
+	std::vector<VectorXr> _solution; //!A Eigen::VectorXr: Stores the system solution.
 	std::vector<Real> _dof;
 
 	//void computeBasisEvaluations();
@@ -64,6 +65,8 @@ protected:
 	void addDirichletBC();
 	void setQ();
  	void setH();
+	void setDelta();
+	void preProcessData();
 
 	//	|DMat | AMat^T  |
 	//	|AMat | MMat	|
@@ -99,7 +102,7 @@ protected:
 */
 public:
 	//!A Constructor.
-	MixedFERegressionBase(const MeshHandler<ORDER,mydim,ndim>& mesh, const InputHandler& regressionData): mesh_(mesh),regressionData_(regressionData),isRcomputed_(false),isWTWfactorized_(false) {};
+	MixedFERegressionBase(const MeshHandler<ORDER,mydim,ndim>& mesh, const InputHandler& regressionData): mesh_(mesh), regressionData_(regressionData), isRcomputed_(false), isWTWfactorized_(false) {};
 
 	template<typename A>
 	void apply(EOExpr<A> oper);
@@ -121,6 +124,48 @@ public:
 	}
 };
 
+template <UInt Nodes, UInt mydim, UInt ndim>
+inline Real integratePsi(const Element<Nodes,mydim,ndim>& t, UInt k)
+{
+	std::cerr<< "TRYING TO EVALUATE ORDER NOT IMPLEMENTED" << std::endl;
+	return 0;
+}
+
+template<>
+inline Real integratePsi(const Element<3,2,2>& t, UInt k)
+{
+	return t.getArea()/3;
+}
+
+template<>
+inline Real integratePsi(const Element<6,2,2>& t, UInt k)
+{
+	if (k==3 || k==4 || k==5)
+		return t.getArea()/3;
+	else
+		return 0;
+}
+
+template<>
+inline Real integratePsi(const Element<3,2,3>& t, UInt k)
+{
+	return t.getArea()/3;
+}
+
+template<>
+inline Real integratePsi(const Element<6,2,3>& t, UInt k)
+{
+	if (k==3 || k==4 || k==5)
+		return t.getArea()/3;
+	else
+		return 0;
+}
+
+template<>
+inline Real integratePsi(const Element<4,3,3>& t, UInt k)
+{
+	return t.getVolume()/4;
+}
 
 
 #include "mixedFERegression_imp.h"

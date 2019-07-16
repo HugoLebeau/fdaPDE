@@ -50,8 +50,8 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::setPsi()
 	UInt nlocations = regressionData_.getNumberofObservations();
 
 	psi_.resize(nlocations, nnodes);
-	if (regressionData_.isLocationsByNodes()){
-
+	if (regressionData_.isLocationsByNodes()) //pointwise data
+	{
 		std::vector<coeff> tripletAll;
 		auto k = regressionData_.getObservationsIndices();
 		tripletAll.reserve(k.size());
@@ -61,8 +61,9 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::setPsi()
 		psi_.setFromTriplets(tripletAll.begin(),tripletAll.end());
 		psi_.makeCompressed();
 	}
-	else {
-		constexpr UInt Nodes = mydim==2? 3*ORDER : 6*ORDER-2;
+	else if (regressionData_.getNumberOfRegions() == 0)
+	{
+		constexpr UInt Nodes = mydim==2 ? 3*ORDER : 6*ORDER-2;
 		Element<Nodes, mydim, ndim> tri_activated;
 		Eigen::Matrix<Real,Nodes,1> coefficients;
 
@@ -89,7 +90,37 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::setPsi()
 				}
 			}
 		}
+		psi_.makeCompressed();
+	}
+	else //areal data
+	{
+		constexpr UInt Nodes = mydim==2 ? 3*ORDER : 6*ORDER-2;
 
+		Real *tab; //Psi_i
+		tab = (Real*) malloc(sizeof(Real)*nnodes);
+		for(UInt i=0; i<nlocations;i++) //nlocations = number of regions
+		{
+			for (UInt k=0; k<nnodes; k++) {tab[k]=0;}
+			for (UInt j=0; j<mesh_.num_elements(); j++)
+			{
+				if (regressionData_.getIncidenceMatrix()(i,j) == 1) //element j is in region i
+				{
+					Element<Nodes, mydim, ndim> tri = mesh_.getElement(j);
+					for (UInt k=0; k<Nodes; k++)
+					{
+						tab[tri[k].getId()] += integratePsi(tri,k); // integral over tri of psi_k
+					}
+				}
+			}
+			for (int k=0; k<nnodes; k++)
+			{
+				if (tab[k] != 0)
+				{
+					psi_.insert(i,k) = tab[k]/Delta_(i);
+				}
+			}
+		}
+		free(tab);
 		psi_.makeCompressed();
 	}
 }
@@ -103,10 +134,10 @@ MatrixXr MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::Left
 	else{
 		MatrixXr W(this->regressionData_.getCovariates());
 		if (isWTWfactorized_ == false ){
-			WTWinv_.compute(W.transpose()*W);
+			WTW_.compute(W.transpose()*W);
 			isWTWfactorized_=true;
 		}
-		MatrixXr Pu= W*WTWinv_.solve(W.transpose()*u);
+		MatrixXr Pu= W*WTW_.solve(W.transpose()*u);
 		return u-Pu;
 	}
 
@@ -187,7 +218,7 @@ MatrixXr MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::syst
 		// Resolution of the system A * x3 = U * x2
 		x1 -= Adec_.solve(U_*x2);
 	}
-
+	
 	return x1;
 }
 
@@ -236,6 +267,39 @@ MatrixXr MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::syst
  	H_=W*WTW.ldlt().solve(W.transpose()); // using cholesky LDLT decomposition for computing hat matrix
  }
 
+template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
+void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim, ndim>::setDelta()
+{
+	UInt nRegions = regressionData_.getNumberOfRegions();
+	Delta_.resize(nRegions,1);
+	for (int i=0; i<nRegions; i++)
+	{
+		Delta_(i)=0;
+		for (int j=0; j<regressionData_.getIncidenceMatrix().cols(); j++)
+		{
+			if (regressionData_.getIncidenceMatrix()(i,j) == 1)
+			{
+				Delta_(i)+=mesh_.elementMeasure(j);
+			}
+		}
+	}
+}
+
+template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
+void MixedFERegressionBase<InputHandler, Integrator, ORDER, mydim, ndim>::preProcessData()
+{
+	z_ = regressionData_.getObservations();
+	if (regressionData_.getNumberOfRegions() > 0) //areal data
+	{
+		VectorXr sqrtDelta(Delta_);
+		for (int r=0; r<regressionData_.getNumberOfRegions(); r++)
+		{
+			sqrtDelta(r) = std::sqrt(sqrtDelta(r));
+		}
+		psi_ = sqrtDelta.asDiagonal()*psi_;
+		z_ = sqrtDelta.asDiagonal()*z_;
+	}
+}
 
 template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
  void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat)
@@ -284,9 +348,11 @@ template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UIn
  
  		DMat.resize(nnodes,nnodes);
  
- 		if (regressionData_.getCovariates().rows() == 0)
- 			DMat = psi_.transpose()*psi_;
- 		else
+ 		if (regressionData_.getCovariates().rows() == 0) //without covariate
+		{
+			DMat = psi_.transpose()*psi_;
+		}
+ 		else //with covariates
  		{
  			DMat = (SpMat(psi_.transpose())*Q_*psi_).sparseView();
  		}
@@ -300,7 +366,7 @@ template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UIn
  
  		DMat.resize(nnodes,nnodes);
  
- 		if (regressionData_.getCovariates().rows() == 0)
+ 		if (regressionData_.getCovariates().rows() == 0) //without covariate
  		{
  			DMat.reserve(1);
  			for (auto i = 0; i<nlocations; ++i)
@@ -309,7 +375,7 @@ template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UIn
  				DMat.insert(index,index) = 1;
  			}
  		}
- 		else
+ 		else //with covariates
  		{
  			//May be inefficient
  			for (auto i = 0; i<nlocations; ++i)
@@ -331,25 +397,24 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::getRightHa
 	UInt nlocations = regressionData_.getNumberofObservations();
 	rightHandData = VectorXr::Zero(nnodes);
 
-	if(regressionData_.getCovariates().rows() == 0)
+	if(regressionData_.getCovariates().rows() == 0) //no covariate
 	{
 		if(regressionData_.isLocationsByNodes())
 		{
-
 			for (auto i=0; i<nlocations;++i)
 			{
 				auto index_i = regressionData_.getObservationsIndices()[i];
-				rightHandData(index_i) = regressionData_.getObservations()[i];
+				rightHandData(index_i) = z_[i];
 			}
 		}
 		else
 		{
-			rightHandData=psi_.transpose()*regressionData_.getObservations();
+			rightHandData=psi_.transpose()*z_;
 		}
 	}
 	else
 	{
-		rightHandData=psi_.transpose()*LeftMultiplybyQ(regressionData_.getObservations());
+		rightHandData=psi_.transpose()*LeftMultiplybyQ(z_);
 	}
 }
 
@@ -380,9 +445,9 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::computeDeg
 	{
 		auto k = regressionData_.getObservationsIndices();
 		DMUMPS_STRUC_C id;
-		int myid, ierr;
-        int argc=0;
-        char ** argv= NULL;
+		//int myid, ierr;
+        //int argc=0;
+        //char ** argv= NULL;
         //MPI_Init(&argc,&argv);
 		//ierr = MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 
@@ -578,15 +643,17 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::apply(EO
 {
 	UInt nnodes=mesh_.num_nodes();
 	FiniteElement<Integrator, ORDER, mydim, ndim> fe;
-	
+
+	setDelta();
 	setPsi();
+	preProcessData();
 
 	if(!regressionData_.getCovariates().rows() == 0)
  	{
  		setH();
  		setQ();
  	}
- 
+
 	if(!regressionData_.isLocationsByNodes())
 	{
 		getDataMatrix(DMat_);
@@ -613,11 +680,9 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::apply(EO
 		SpMat R0_lambda = (-lambda)*R0_;
 		this->buildA(psi_, R1_lambda, R0_lambda);
 		this->buildCoeffMatrix(DMat_, R1_lambda, R0_lambda);
-		//std::cout << coeffmatrix_ << std::endl;
 		//Applying boundary conditions if necessary
 		if(regressionData_.getDirichletIndices().size() != 0)
 			addDirichletBC();
-
 		system_factorize();
 		_solution[i] = this->template system_solve(this->_b);
 		if(regressionData_.computeDOF())
