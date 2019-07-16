@@ -30,7 +30,6 @@ class  RegressionData{
 		//Areal data
 		MatrixXi incidenceMatrix_;
 		UInt nRegions_;
-		bool arealData_;
 
 		//Other parameters
 		UInt order_;
@@ -86,11 +85,11 @@ class  RegressionData{
 
 		#ifdef R_VERSION_
 		explicit RegressionData(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP Rcovariates,
-								SEXP RincidenceMatrix, SEXP RarealData, SEXP RBCIndices, SEXP RBCValues, SEXP DOF,
-								SEXP RGCVmethod, SEXP Rnrealizations);
+								SEXP RincidenceMatrix, SEXP RBCIndices, SEXP RBCValues, SEXP DOF, SEXP RGCVmethod,
+								SEXP Rnrealizations);
 		#endif
 
-		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates, MatrixXi& incidenceMatrix, bool arealData, std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
+		explicit RegressionData(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, MatrixXr& covariates, MatrixXi& incidenceMatrix, std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
 
 
 		void printObservations(std::ostream & out) const;
@@ -108,8 +107,9 @@ class  RegressionData{
 		inline UInt const getNumberofObservations() const {return observations_.size();}
 		//! A method returning the locations of the observations
 		inline std::vector<Point> const & getLocations() const {return locations_;}
+		//! A method returning the number of regions
+		inline UInt const getNumberOfRegions() const {return nRegions_;}
 		inline bool isLocationsByNodes() const {return locations_by_nodes_;}
-		inline bool isArealData() const {return arealData_;}
 		inline bool computeDOF() const {return DOF_;}
 		inline std::vector<UInt> const & getObservationsIndices() const {return observations_indices_;}
 		//! A method returning the the penalization term
@@ -138,12 +138,16 @@ class  RegressionDataElliptic:public RegressionData
 
 	public:
 		#ifdef R_VERSION_
-		explicit RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF,SEXP RGCVmethod, SEXP Rnrealizations);
+		explicit RegressionDataElliptic(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, 
+				SEXP Rbeta, SEXP Rc, SEXP Rcovariates, SEXP RincidenceMatrix, SEXP RBCIndices, SEXP RBCValues,
+				SEXP DOF,SEXP RGCVmethod, SEXP Rnrealizations);
 		#endif
 
-		explicit RegressionDataElliptic(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, Eigen::Matrix<Real,2,2>& K,	Eigen::Matrix<Real,2,1>& beta,
-		Real c, MatrixXr& covariates , std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
+		explicit RegressionDataElliptic(std::vector<Point>& locations, VectorXr& observations, UInt order,
+										std::vector<Real> lambda, Eigen::Matrix<Real,2,2>& K,
+										Eigen::Matrix<Real,2,1>& beta, Real c, MatrixXr& covariates,
+										MatrixXi& incidenceMatrix, std::vector<UInt>& bc_indices,
+										std::vector<Real>& bc_values, bool DOF);
 
 		inline Eigen::Matrix<Real,2,2> const & getK() const {return K_;}
 		inline Eigen::Matrix<Real,2,1> const & getBeta() const {return beta_;}
@@ -160,13 +164,20 @@ class RegressionDataEllipticSpaceVarying:public RegressionData
 
 	public:
 		#ifdef R_VERSION_
-		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda, SEXP RK, SEXP Rbeta,
-				 SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RBCIndices, SEXP RBCValues, SEXP DOF,SEXP RGCVmethod, SEXP Rnrealizations);
+		explicit RegressionDataEllipticSpaceVarying(SEXP Rlocations, SEXP Robservations, SEXP Rorder, SEXP Rlambda,
+				SEXP RK, SEXP Rbeta, SEXP Rc, SEXP Ru, SEXP Rcovariates, SEXP RincidenceMatrix, SEXP RBCIndices,
+				SEXP RBCValues, SEXP DOF, SEXP RGCVmethod, SEXP Rnrealizations);
 		#endif
 
 
-		explicit RegressionDataEllipticSpaceVarying(std::vector<Point>& locations, VectorXr& observations, UInt order, std::vector<Real> lambda, const std::vector<Eigen::Matrix<Real,2,2>, Eigen::aligned_allocator<Eigen::Matrix<Real,2,2> > >& K,	const std::vector<Eigen::Matrix<Real,2,1>, Eigen::aligned_allocator<Eigen::Matrix<Real,2,1> > >& beta,
-				const std::vector<Real>& c, const std::vector<Real>& u, MatrixXr& covariates , std::vector<UInt>& bc_indices, std::vector<Real>& bc_values, bool DOF);
+		explicit RegressionDataEllipticSpaceVarying(std::vector<Point>& locations, VectorXr& observations,
+													UInt order, std::vector<Real> lambda,
+													const std::vector<Eigen::Matrix<Real,2,2>, Eigen::aligned_allocator<Eigen::Matrix<Real,2,2> > >& K,
+													const std::vector<Eigen::Matrix<Real,2,1>, Eigen::aligned_allocator<Eigen::Matrix<Real,2,1> > >& beta,
+													const std::vector<Real>& c, const std::vector<Real>& u,
+													MatrixXr& covariates, MatrixXi& incidenceMatrix,
+													std::vector<UInt>& bc_indices, std::vector<Real>& bc_values,
+													bool DOF);
 
 		inline Diffusivity const & getK() const {return K_;}
 		inline Advection const & getBeta() const {return beta_;}
