@@ -101,6 +101,21 @@ Element<3*ORDER,2,2> MeshHandler<ORDER,2,2>::findLocationWalking(const Point& po
 	return current_element;
 }
 
+template <UInt ORDER>
+Real MeshHandler<ORDER,2,2>::elementMeasure(Id id) const
+{
+	std::vector<Point> p;
+	p.resize(3*ORDER);
+	Id id_current_point;
+	for (int i=0; i<3*ORDER; ++i)
+	{
+		id_current_point = elements_[i*num_elements_ + id];
+		p[i]= Point(id_current_point, Identifier::NVAL, points_[id_current_point],points_[num_nodes_+id_current_point]);
+	}
+	Real area = std::abs((p[1][0]-p[0][0])*(p[2][1]-p[0][1])-(p[2][0]-p[0][0])*(p[1][1]-p[0][1]))/2;
+	return area;
+}
+
 
 /*std::ostream & operator<<(std::ostream & out, MeshHandler const& m){
 	out<< " ***** MESH  INFORMATION ******"<<std::endl;
@@ -306,6 +321,24 @@ Element<3*ORDER,2,3> MeshHandler<ORDER,2,3>::findLocationNaive(Point point) cons
 }
 
 template <UInt ORDER>
+Real MeshHandler<ORDER,2,3>::elementMeasure(Id id) const
+{
+	std::vector<Point> p;
+	p.resize(3*ORDER);
+	Id id_current_point;
+	for (int i=0; i<3*ORDER; ++i)
+	{
+		id_current_point = elements_[3*ORDER * id + i];
+		p[i]= Point(id_current_point, Identifier::NVAL, points_[3*id_current_point],points_[3*id_current_point+1],points_[3*id_current_point+2]);
+	}
+	Real a2 = std::pow(p[1][0]-p[2][0],2)+std::pow(p[1][1]-p[2][1],2)+std::pow(p[1][2]-p[2][2],2);
+	Real b2 = std::pow(p[0][0]-p[2][0],2)+std::pow(p[0][1]-p[2][1],2)+std::pow(p[0][2]-p[2][2],2);
+	Real c2 = std::pow(p[0][0]-p[1][0],2)+std::pow(p[0][1]-p[1][1],2)+std::pow(p[0][2]-p[1][2],2);
+	Real area = std::sqrt(4*(a2*b2+a2*c2+b2*c2)-std::pow(a2+b2+c2,2))/4; //Heron's formula
+	return area;
+}
+
+template <UInt ORDER>
 void MeshHandler<ORDER,2,3>::printPoints(std::ostream & out)
 {
 std::cout<<"printing points"<<"\n";
@@ -388,6 +421,21 @@ Element<6*ORDER-2,3,3> MeshHandler<ORDER,3,3>::findLocationNaive(Point point) co
 }
 
 template <UInt ORDER>
+Real MeshHandler<ORDER,3,3>::elementMeasure(Id id) const
+{
+	std::vector<Point> p;
+	p.resize(6*ORDER-2);
+	Id id_current_point;
+	for (int i=0; i<6*ORDER-2; ++i)
+	{
+		id_current_point = elements_[(6*ORDER-2) * id + i];
+		p[i]= Point(id_current_point, Identifier::NVAL, points_[3*id_current_point],points_[3*id_current_point+1],points_[3*id_current_point+2]);
+	}
+	Real volume = std::abs((p[1][0]-p[0][0])*((p[2][1]-p[0][1])*(p[3][2]-p[0][2])-(p[3][1]-p[0][1])*(p[2][2]-p[0][2]))-(p[2][0]-p[0][0])*((p[1][1]-p[0][1])*(p[3][2]-p[0][2])-(p[3][1]-p[0][1])*(p[1][2]-p[0][2]))+(p[3][0]-p[0][0])*((p[1][1]-p[0][1])*(p[2][2]-p[0][2])-(p[2][1]-p[0][1])*(p[1][2]-p[0][2])))/6;
+	return volume;
+}
+
+template <UInt ORDER>
 void MeshHandler<ORDER,3,3>::printPoints(std::ostream & out)
 {
 std::cout<<"printing points"<<"\n";
@@ -411,6 +459,5 @@ void MeshHandler<ORDER,3,3>::printElements(std::ostream & out)
 	}
 
 }
-
 
 #endif

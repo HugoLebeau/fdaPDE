@@ -3,7 +3,7 @@
 
 #include "fdaPDE.h"
 #include "mesh_objects.h"
-
+#include <math.h>
 
 
 using std::vector;
@@ -46,7 +46,7 @@ public:
 
 	//! A normal member returning an unsigned integer value.
     /*!
-      \return The number of nodes in the mesh
+      \return The number of elements in the mesh
     */
     UInt num_elements() const {return num_elements_;}
 
@@ -117,6 +117,13 @@ public:
     */
     Element<3*ORDER,2,2> findLocationWalking(const Point& point, const Element<3*ORDER,2,2>& starting_element) const;
 
+    //! A normal member returning the area of an Element
+    /*!
+     * \param id an Id argument
+      \return The volume of the element with the given id
+    */
+    Real elementMeasure(Id id) const;
+
     //int readMesh(std::string const & file);
 	//double measure()const;
 	//bool checkmesh()const;
@@ -185,7 +192,7 @@ public:
 
 	//! A normal member returning an unsigned integer value.
     /*!
-      \return The number of nodes in the mesh
+      \return The number of elements in the mesh
     */
     UInt num_elements() const {return num_elements_;}
 
@@ -214,6 +221,13 @@ public:
       \return The element that contains the point
     */
     Element<3*ORDER,2,3> findLocationNaive(Point point) const;
+
+    //! A normal member returning the area of an Element
+    /*!
+     * \param id an Id argument
+      \return The volume of the element with the given id
+    */
+    Real elementMeasure(Id id) const;
 
 
 private:
@@ -293,6 +307,13 @@ public:
       \return The element that contains the point
     */
     Element<6*ORDER-2,3,3> findLocationNaive(Point point) const;
+
+    //! A normal member returning the volume of an Element
+    /*!
+     * \param id an Id argument
+      \return The volume of the element with the given id
+    */
+    Real elementMeasure(Id id) const;
 
 
 private:
