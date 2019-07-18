@@ -92,9 +92,10 @@ SEXP eval_FEM_fd(SEXP Rmesh, SEXP Rlocations, SEXP RincidenceMatrix, SEXP Rcoef,
 	double *X, *Y, *Z;
 	UInt **incidenceMatrix;
 	double *coef;
-	int order,mydim,ndim;
+	int order, mydim, ndim;
 	bool fast;
 
+	coef  = REAL(Rcoef);
     order = INTEGER(Rorder)[0];
     fast  = INTEGER(Rfast)[0];
     mydim = INTEGER(Rmydim)[0];
