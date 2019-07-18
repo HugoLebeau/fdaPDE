@@ -5,14 +5,15 @@ RegressionData::RegressionData(std::vector<Point>& locations, VectorXr& observat
 					locations_(locations), observations_(observations), covariates_(covariates), incidenceMatrix_(incidenceMatrix),
 					order_(order), lambda_(lambda), bc_values_(bc_values), bc_indices_(bc_indices), DOF_(DOF)
 {
-	if(locations_.size()==0)
+	nRegions_ = incidenceMatrix_.rows();
+	if(locations_.size()==0 && nRegions_==0)
 	{
-		locations_by_nodes_= true;
+		locations_by_nodes_ = true;
 		for(int i = 0; i<observations_.size();++i) observations_indices_.push_back(i);
 	}
 	else
 	{
-		locations_by_nodes_= false;
+		locations_by_nodes_ = false;
 	}
 }
 
@@ -234,6 +235,7 @@ void RegressionData::printIncidenceMatrix(std::ostream & out) const
 		{
 			out << incidenceMatrix_(i,j) << "\t";
 		}
+		out << std::endl;
 	}
 }
 
