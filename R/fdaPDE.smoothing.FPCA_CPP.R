@@ -1,4 +1,4 @@
-CPP_smooth.FEM.FPCA<-function(locations, datamatrix, FEMbasis, lambda, ndim, mydim,nPC,validation, NFolds,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.FEM.FPCA<-function(locations, datamatrix, FEMbasis, incidence_matrix, lambda, ndim, mydim,nPC,validation, NFolds,GCVmethod = 2, nrealizations = 100)
 { 
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   ##TO BE CHANGED SOON: LOW PERFORMANCES, IMPLIES COPY OF PARAMETERS
@@ -10,12 +10,18 @@ CPP_smooth.FEM.FPCA<-function(locations, datamatrix, FEMbasis, lambda, ndim, myd
   {
     locations<-matrix(nrow = 0, ncol = ndim)
   }
+
+  if(is.null(incidence_matrix))
+  {
+    incidence_matrix<-matrix(nrow = 0, ncol = 1)
+  }
   
-   if(is.null(validation)) 
-   {
-  	validation="NoValidation"
-   }
-  ## Set propr type for correct C++ reading
+  if(is.null(validation)) 
+  {
+    validation="NoValidation"
+  }
+
+  ## Set proper type for correct C++ reading
   locations <- as.matrix(locations)
   storage.mode(locations) <- "double"
   storage.mode(FEMbasis$mesh$nodes) <- "double"
@@ -23,24 +29,24 @@ CPP_smooth.FEM.FPCA<-function(locations, datamatrix, FEMbasis, lambda, ndim, myd
   storage.mode(FEMbasis$mesh$edges) <- "integer"
   storage.mode(FEMbasis$mesh$neighbors) <- "integer"
   storage.mode(FEMbasis$order) <- "integer"
-  storage.mode(lambda)<- "double"
-  storage.mode(ndim)<- "integer"
-  storage.mode(mydim)<- "integer"
-  nPC<-as.integer(nPC)
-  storage.mode(nPC)<-"integer"
-  validation<-as.character(validation)
-  storage.mode(validation)<-"character"
-  NFolds<-as.integer(NFolds)
-  storage.mode(NFolds)<-"integer"
-  
-  
-  storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
+  storage.mode(lambda )<- "double"
+  storage.mode(ndim) <- "integer"
+  storage.mode(mydim) <- "integer"
+  nPC <- as.integer(nPC)
+  storage.mode(nPC) <- "integer"
+  validation <- as.character(validation)
+  storage.mode(validation) <- "character"
+  NFolds <- as.integer(NFolds)
+  storage.mode(NFolds) <- "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
   bigsol <- .Call("Smooth_FPCA", locations, datamatrix, FEMbasis$mesh, 
-                  FEMbasis$order,mydim,ndim, 
-                  lambda,nPC,validation,NFolds,GCVmethod, nrealizations,
+                  FEMbasis$order, incidence_matrix, mydim, ndim, 
+                  lambda, nPC, validation, NFolds, GCVmethod, nrealizations,
                   package = "fdaPDE")
   
   ## Reset them correctly
@@ -52,7 +58,7 @@ CPP_smooth.FEM.FPCA<-function(locations, datamatrix, FEMbasis, lambda, ndim, myd
 
 
 
-CPP_smooth.manifold.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim, mydim,nPC, validation, NFolds,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.manifold.FEM.FPCA<-function(locations, datamatrix, mesh, incidence_matrix, lambda, ndim, mydim, nPC, validation, NFolds, GCVmethod = 2, nrealizations = 100)
 {
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   # This is done in C++ now to optimize speed
@@ -62,10 +68,15 @@ CPP_smooth.manifold.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim
     locations<-matrix(nrow = 0, ncol = ndim)
   }
   
-   if(is.null(validation))
-   {
-  	validation="NoValidation"
-   }
+  if(is.null(incidence_matrix))
+  {
+    incidence_matrix<-matrix(nrow = 0, ncol = 1)
+  }
+
+  if(is.null(validation))
+  {
+    validation="NoValidation"
+  }
   
   ## Set propr type for correct C++ reading
   locations <- as.matrix(locations)
@@ -77,29 +88,30 @@ CPP_smooth.manifold.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim
   storage.mode(mesh$ntriangles) <- "integer"
   storage.mode(mesh$nodes) <- "double"
   storage.mode(mesh$triangles) <- "integer"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
   storage.mode(lambda) <- "double"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
-  nPC<-as.integer(nPC)
-  storage.mode(nPC)<-"integer"
-  validation<-as.character(validation)
-  storage.mode(validation)<-"character"
-  NFolds<-as.integer(NFolds)
-  storage.mode(NFolds)<-"integer"
-  
-  storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  nPC <- as.integer(nPC)
+  storage.mode(nPC) <- "integer"
+  validation <- as.character(validation)
+  storage.mode(validation) <- "character"
+  NFolds <- as.integer(NFolds)
+  storage.mode(NFolds) <- "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
   bigsol <- .Call("Smooth_FPCA", locations, datamatrix, mesh, 
-                  mesh$order, mydim, ndim, lambda,
-                  nPC, validation, NFolds,GCVmethod, nrealizations,
+                  mesh$order, incidence_matrix, mydim, ndim, lambda,
+                  nPC, validation, NFolds, GCVmethod, nrealizations,
                   package = "fdaPDE")
 
   return(bigsol)
 }
 
-CPP_smooth.volume.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim, mydim,nPC, validation, NFolds,GCVmethod = 2, nrealizations = 100)
+CPP_smooth.volume.FEM.FPCA<-function(locations, datamatrix, mesh, incidence_matrix, lambda, ndim, mydim, nPC, validation, NFolds, GCVmethod = 2, nrealizations = 100)
 {
   # Indexes in C++ starts from 0, in R from 1, opportune transformation
   # This is done in C++ now to optimize speed
@@ -108,11 +120,16 @@ CPP_smooth.volume.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim, 
   {
     locations<-matrix(nrow = 0, ncol = ndim)
   }
+
+  if(is.null(incidence_matrix))
+  {
+    incidence_matrix<-matrix(nrow = 0, ncol = 1)
+  }
   
-   if(is.null(validation))
-   {
-  	validation="NoValidation"
-   }
+  if(is.null(validation))
+  {
+    validation="NoValidation"
+  }
   
   ## Set propr type for correct C++ reading
   locations <- as.matrix(locations)
@@ -124,23 +141,24 @@ CPP_smooth.volume.FEM.FPCA<-function(locations, datamatrix, mesh, lambda, ndim, 
   storage.mode(mesh$ntetrahedrons) <- "integer"
   storage.mode(mesh$nodes) <- "double"
   storage.mode(mesh$tetrahedrons) <- "integer"
+  incidence_matrix <- as.matrix(incidence_matrix)
+  storage.mode(incidence_matrix) <- "integer"
   storage.mode(lambda) <- "double"
   storage.mode(ndim) <- "integer"
   storage.mode(mydim) <- "integer"
-  nPC<-as.integer(nPC)
-  storage.mode(nPC)<-"integer"
-  validation<-as.character(validation)
-  storage.mode(validation)<-"character"
-  NFolds<-as.integer(NFolds)
-  storage.mode(NFolds)<-"integer"
-  
-  storage.mode(nrealizations) = "integer"
-  storage.mode(GCVmethod) = "integer"
+  nPC <- as.integer(nPC)
+  storage.mode(nPC) <- "integer"
+  validation <- as.character(validation)
+  storage.mode(validation) <- "character"
+  NFolds <- as.integer(NFolds)
+  storage.mode(NFolds) <- "integer"
+  storage.mode(nrealizations) <- "integer"
+  storage.mode(GCVmethod) <- "integer"
   
   ## Call C++ function
   bigsol <- .Call("Smooth_FPCA", locations, datamatrix, mesh, 
-                  mesh$order, mydim, ndim, lambda,
-                  nPC, validation, NFolds,GCVmethod, nrealizations,
+                  mesh$order, incidence_matrix, mydim, ndim, lambda,
+                  nPC, validation, NFolds, GCVmethod, nrealizations,
                   package = "fdaPDE")
 
   return(bigsol)

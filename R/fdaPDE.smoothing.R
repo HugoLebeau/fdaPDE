@@ -409,7 +409,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   checkSmoothingParametersSize(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, BC, GCV, CPP_CODE, PDE_parameters_constant = NULL, PDE_parameters_func = PDE_parameters, ndim, mydim)
   ################## End checking parameters, sizes and conversion #############################
   
-  bigsol = NULL  
+  bigsol = NULL
   
   if(CPP_CODE == FALSE)
   {
