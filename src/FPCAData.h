@@ -23,6 +23,10 @@ class  FPCAData{
 		std::vector<UInt> observations_indices_;
 		UInt n_;
 		UInt p_;
+
+		//Areal data
+		MatrixXi incidenceMatrix_;
+		UInt nRegions_;
 		
 		//Other parameters
 		UInt order_;
@@ -42,6 +46,7 @@ class  FPCAData{
 		void setDatamatrix(SEXP Rdatamatrix);
 		void setLocations(SEXP Rlocations);
 		void setNrealizations(SEXP Rnrealizations);
+		void setIncidenceMatrix(SEXP RincidenceMatrix);
 		#endif
 
 	public:
@@ -69,17 +74,18 @@ class  FPCAData{
 		FPCAData(){};
 
 		#ifdef R_VERSION_
-		explicit FPCAData(SEXP Rlocations, SEXP Rdatamatrix, SEXP Rorder,
-		SEXP Rlambda, SEXP RnPC, SEXP RnFolds,SEXP RGCVmethod, SEXP Rnrealizations);
+		explicit FPCAData(SEXP Rlocations, SEXP Rdatamatrix, SEXP Rorder, SEXP RincidenceMatrix,
+		SEXP Rlambda, SEXP RnPC, SEXP RnFolds, SEXP RGCVmethod, SEXP Rnrealizations);
 		#endif
 
 				
 		explicit FPCAData(std::vector<Point>& locations, MatrixXr& datamatrix,
-		UInt order, std::vector<Real> lambda, UInt nPC, UInt nFolds);
+		UInt order, MatrixXi& incidenceMatrix, std::vector<Real> lambda, UInt nPC, UInt nFolds);
 
 
 		void printDatamatrix(std::ostream & out) const;
 		void printLocations(std::ostream & out) const;
+		void printIncidenceMatrix(std::ostream & out) const;
 
 		//! A method returning the locations of the observations
 		inline std::vector<Point> const & getLocations() const {return locations_;}
@@ -90,11 +96,17 @@ class  FPCAData{
 		
 		//! A method returning a reference to the observations vector
 		inline MatrixXr const & getDatamatrix() const {return datamatrix_;}
+
+		//! A method returning a reference to the incidence matrix
+		inline MatrixXi const & getIncidenceMatrix() const {return incidenceMatrix_;}
 		
 		//! A method returning the number of observations
 		inline UInt const getNumberofObservations() const {return datamatrix_.cols();}
 		//! A method returning the observations indices
 		inline std::vector<UInt> const & getObservationsIndices() const {return observations_indices_;}
+
+		//! A method returning the number of regions
+		inline UInt const getNumberOfRegions() const {return nRegions_;}
 
 		//! A method returning the number of Principal Components to compute
 		inline UInt const getNPC() const {return nPC_;}
