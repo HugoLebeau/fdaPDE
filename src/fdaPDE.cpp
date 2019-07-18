@@ -51,10 +51,10 @@ SEXP regression_skeleton(InputHandler &regressionData, SEXP Rmesh)
 }
 
 template<typename Integrator,UInt ORDER, UInt mydim, UInt ndim>
-SEXP FPCA_skeleton(FPCAData &fPCAData, SEXP Rmesh,std::string validation)
+SEXP FPCA_skeleton(FPCAData &fPCAData, SEXP Rmesh, std::string validation)
 {
 	MeshHandler<ORDER, mydim, ndim> mesh(Rmesh);
-	std::unique_ptr<MixedFEFPCABase<Integrator, ORDER, mydim, ndim>> fpca = MixedFEFPCAfactory<Integrator, ORDER, mydim, ndim>::createFPCAsolver(validation, mesh,fPCAData);
+	std::unique_ptr<MixedFEFPCABase<Integrator, ORDER, mydim, ndim>> fpca = MixedFEFPCAfactory<Integrator, ORDER, mydim, ndim>::createFPCAsolver(validation, mesh, fPCAData);
 	
 	fpca->apply();
 
@@ -375,9 +375,9 @@ SEXP get_FEM_PDE_space_varying_matrix(SEXP Rlocations, SEXP Robservations, SEXP 
 	
 	\return R-vector containg the coefficients of the solution
 */
-SEXP Smooth_FPCA(SEXP Rlocations, SEXP Rdatamatrix, SEXP Rmesh, SEXP Rorder, SEXP Rmydim, SEXP Rndim, SEXP Rlambda, SEXP RnPC, SEXP Rvalidation, SEXP RnFolds,SEXP RGCVmethod, SEXP Rnrealizations){
+SEXP Smooth_FPCA(SEXP Rlocations, SEXP Rdatamatrix, SEXP Rmesh, SEXP Rorder, SEXP RincidenceMatrix, SEXP Rmydim, SEXP Rndim, SEXP Rlambda, SEXP RnPC, SEXP Rvalidation, SEXP RnFolds,SEXP RGCVmethod, SEXP Rnrealizations){
 //Set data                  
-	FPCAData fPCAdata(Rlocations, Rdatamatrix, Rorder, Rlambda, RnPC, RnFolds,RGCVmethod, Rnrealizations);
+	FPCAData fPCAdata(Rlocations, Rdatamatrix, Rorder, RincidenceMatrix, Rlambda, RnPC, RnFolds, RGCVmethod, Rnrealizations);
 
 //     
 	UInt mydim=INTEGER(Rmydim)[0]; 
@@ -388,13 +388,13 @@ SEXP Smooth_FPCA(SEXP Rlocations, SEXP Rdatamatrix, SEXP Rmesh, SEXP Rorder, SEX
 	if(fPCAdata.getOrder() == 1 && mydim==2 && ndim==2)
 		return(FPCA_skeleton<IntegratorTriangleP2, 1, 2, 2>(fPCAdata, Rmesh, validation));
 	else if(fPCAdata.getOrder() == 2 && mydim==2 && ndim==2)
-		return(FPCA_skeleton<IntegratorTriangleP4, 2, 2, 2>(fPCAdata, Rmesh,validation));
+		return(FPCA_skeleton<IntegratorTriangleP4, 2, 2, 2>(fPCAdata, Rmesh, validation));
 	else if(fPCAdata.getOrder() == 1 && mydim==2 && ndim==3)
-		return(FPCA_skeleton<IntegratorTriangleP2, 1, 2, 3>(fPCAdata, Rmesh,validation));
+		return(FPCA_skeleton<IntegratorTriangleP2, 1, 2, 3>(fPCAdata, Rmesh, validation));
 	else if(fPCAdata.getOrder() == 2 && mydim==2 && ndim==3)
-		return(FPCA_skeleton<IntegratorTriangleP4, 2, 2, 3>(fPCAdata, Rmesh,validation));
+		return(FPCA_skeleton<IntegratorTriangleP4, 2, 2, 3>(fPCAdata, Rmesh, validation));
 	else if(fPCAdata.getOrder() == 1 && mydim==3 && ndim==3)
-		return(FPCA_skeleton<IntegratorTetrahedronP2, 1, 3, 3>(fPCAdata, Rmesh,validation));
+		return(FPCA_skeleton<IntegratorTetrahedronP2, 1, 3, 3>(fPCAdata, Rmesh, validation));
 	return(NILSXP);
 	 }      
 
