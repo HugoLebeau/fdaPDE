@@ -3,7 +3,7 @@ graphics.off()
 
 library(fdaPDE)
 
-dimension<-2
+dimension<-"2.5"
 path<-"~/Documents/ENSTA Paris 2A/PRe/Projet/fdaPDE/"
 
 ## WORKING DIRECTORY
@@ -24,15 +24,17 @@ incidence_matrix[3,refElems==4]<-1
 observations<-c(5,10,15)
 
 ## W
-cov<-NULL
-#cov<-c(9,2,3)
+#cov<-NULL
+cov<-c(9,2,3)
 #cov<-cbind(c(9,2,3),c(5,2,4))
 #cov<-observations
 
 
-if (dimension==2){
+if (dimension=="2"){
   mesh<-create.MESH.2D(nodes=nodes,triangles=elems)
-}else if (dimension==3){
+}else if (dimension=="2.5"){
+  mesh<-create.MESH.2.5D(nodes=nodes,triangles=elems)
+}else if (dimension=="3"){
   mesh<-create.MESH.3D(nodes=nodes,tetrahedrons=elems)
 }
 
