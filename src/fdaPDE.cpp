@@ -63,7 +63,7 @@ SEXP FPCA_skeleton(FPCAData &fPCAData, SEXP Rmesh, std::string validation)
 	const std::vector<Real>& lambdas = fpca->getLambdaPC();
 	const std::vector<Real>& variance_explained = fpca->getVarianceExplained();
 	const std::vector<Real>& cumsum_percentage = fpca->getCumulativePercentage();
-	const std::vector<Real>& var=fpca->getVar();
+	const std::vector<Real>& var = fpca->getVar();
 
 	//Copy result in R memory  
 	SEXP result = NILSXP;

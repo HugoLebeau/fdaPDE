@@ -336,15 +336,15 @@ void MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::SetAndFixParameters()
 
 ///CLASS MIXEDFEFPCA
 template<typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
-void MixedFEFPCA<Integrator,ORDER, mydim, ndim>::apply()
+void MixedFEFPCA<Integrator, ORDER, mydim, ndim>::apply()
 {
-	MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::SetAndFixParameters();
+	MixedFEFPCABase<Integrator, ORDER, mydim, ndim>::SetAndFixParameters();
 	
 	for(auto np=0; np<this->fpcaData_.getNPC(); np++)
 	{
 		UInt i=0;
 		FPCAObject FPCAinput(this->datamatrixResiduals_);
-		MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::computeIterations(this->datamatrixResiduals_,FPCAinput,i,this->mesh_.num_nodes());
+		MixedFEFPCABase<Integrator, ORDER, mydim, ndim>::computeIterations(this->datamatrixResiduals_,FPCAinput,i,this->mesh_.num_nodes());
 
 		this->scores_mat_[np]=FPCAinput.getScores();
 		this->loadings_mat_[np]=FPCAinput.getLoadings();
@@ -364,8 +364,8 @@ void MixedFEFPCA<Integrator,ORDER, mydim, ndim>::apply()
 
 		this->scores_mat_[np]=this->scores_mat_[np]*load_norm;
 	}
-	MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::computeVarianceExplained();
-	MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::computeCumulativePercentageExplained();
+	MixedFEFPCABase<Integrator, ORDER, mydim, ndim>::computeVarianceExplained();
+	MixedFEFPCABase<Integrator, ORDER, mydim, ndim>::computeCumulativePercentageExplained();
 }
 
 
@@ -638,7 +638,7 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 	
 	AMat_lambda_vec.resize(this->fpcaData_.getLambda().size());
 	MMat_lambda_vec.resize(this->fpcaData_.getLambda().size());
-	for(auto j=0;j<niter;j++)
+	for(auto j=0; j<niter; j++)
 	{
 		FPCAinput.setObservationData(datamatrixResiduals_);
 		for(auto i = 0; i<this->fpcaData_.getLambda().size(); ++i)
@@ -659,7 +659,7 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 			VectorXr rightHandData;
 			this->computeRightHandData(rightHandData,FPCAinput);
 			this->b_ = VectorXr::Zero(2*nnodes);
-			this->b_.topRows(nnodes)=rightHandData;
+			this->b_.topRows(nnodes) = rightHandData;
 			
 			this->solution_[i]=this->sparseSolver_.solve(this->b_);
 			if(this->sparseSolver_.info()!=Eigen::Success)
@@ -667,7 +667,7 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 				//std::cerr<<"solving failed!"<<std::endl;
 			}
 			if(this->fpcaData_.isLocationsByNodes())
-				FPCAinput.setLoadings(nnodes, this->solution_	[i],this->fpcaData_.getObservationsIndices());
+				FPCAinput.setLoadings(nnodes, this->solution_[i], this->fpcaData_.getObservationsIndices());
 			else 
 				FPCAinput.setLoadingsPsi(nnodes, this->solution_[i],this->Psi_);
 				
@@ -680,14 +680,14 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 			computeGCV(FPCAinput,i);
 		}
 		dof_computed=1;
-		UInt index_best_GCV=std::distance(GCV_.begin(),std::min_element(GCV_.begin(),GCV_.end()));
+		UInt index_best_GCV = std::distance(GCV_.begin(),std::min_element(GCV_.begin(),GCV_.end()));
 		if(this->fpcaData_.isLocationsByNodes())
 			FPCAinput.setLoadings(nnodes, this->solution_[index_best_GCV], this->fpcaData_.getObservationsIndices());
 		else 
 			FPCAinput.setLoadingsPsi(nnodes, this->solution_[index_best_GCV], this->Psi_);
 			
 		FPCAinput.setScores(this->datamatrixResiduals_);
-		best_GCV=index_best_GCV;
+		best_GCV = index_best_GCV;
 	}
 	
 	if(this->fpcaData_.isLocationsByNodes())
@@ -725,7 +725,7 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::apply()
 	loadings_lambda_.resize(this->fpcaData_.getLambda().size());
 	scores_lambda_.resize(this->fpcaData_.getLambda().size());
 	
-	for(auto np=0;np<this->fpcaData_.getNPC();np++)
+	for(auto np=0; np<this->fpcaData_.getNPC(); np++)
 	{
 		computeIterationsGCV(this->datamatrixResiduals_,this->mesh_.num_nodes(),np);
 	}
@@ -828,7 +828,7 @@ void MixedFEFPCAKFold<Integrator,ORDER, mydim, ndim>::apply()
 			FPCAObject FPCAinput(this->datamatrixResiduals_);
 			computeKFolds(this->datamatrixResiduals_, i, this->mesh_.num_nodes(), nFolds);
 		}
-		UInt index_best_KF=std::distance(KFold_.begin(),std::min_element(KFold_.begin(),KFold_.end()));
+		UInt index_best_KF = std::distance(KFold_.begin(),std::min_element(KFold_.begin(),KFold_.end()));
 		FPCAObject FPCAinput(this->datamatrixResiduals_);
 		MixedFEFPCABase<Integrator,ORDER, mydim, ndim>::computeIterations(this->datamatrixResiduals_,FPCAinput,index_best_KF,this->mesh_.num_nodes());
 		
