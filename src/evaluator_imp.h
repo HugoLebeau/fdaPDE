@@ -142,10 +142,8 @@ void Evaluator<ORDER, 2, 2>::integrate(UInt** incidenceMatrix, UInt nRegions, UI
 				current_element = mesh_.getElement(elem);
 				Real measure = mesh_.elementMeasure(elem);
 				Delta[region] += measure;
-				// THIS IS ONLY FOR ORDER==1
-				// NOT YET IMPLEMENTED FOR ORDER==2
 				Real s = 0;
-				for (int node=0; node<Nodes; node++)
+				for (int node = ORDER==1 ? 0 : 3; node<Nodes; node++)
 				{
 					s+=coef[current_element[node].getId()];
 				}
@@ -176,10 +174,8 @@ void Evaluator<ORDER, 2, 3>::integrate(UInt** incidenceMatrix, UInt nRegions, UI
 				current_element = mesh_.getElement(elem);
 				Real measure = mesh_.elementMeasure(elem);
 				Delta[region] += measure;
-				// THIS IS ONLY FOR ORDER==1
-				// NOT YET IMPLEMENTED FOR ORDER==2
 				Real s = 0;
-				for (int node=0; node<Nodes; node++)
+				for (int node = ORDER==1 ? 0 : 3; node<Nodes; node++)
 				{
 					s+=coef[current_element[node].getId()];
 				}
@@ -211,7 +207,6 @@ void Evaluator<ORDER, 3, 3>::integrate(UInt** incidenceMatrix, UInt nRegions, UI
 				Real measure = mesh_.elementMeasure(elem);
 				Delta[region] += measure;
 				// THIS IS ONLY FOR ORDER==1
-				// NOT YET IMPLEMENTED FOR ORDER==2
 				Real s = 0;
 				for (int node=0; node<Nodes; node++)
 				{

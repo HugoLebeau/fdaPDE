@@ -130,7 +130,7 @@ SEXP eval_FEM_fd(SEXP Rmesh, SEXP Rlocations, SEXP RincidenceMatrix, SEXP Rcoef,
 		incidenceMatrix[i] = (UInt*) malloc(sizeof(UInt)*nElements);
 		for (int j=0; j<nElements; j++)
 		{
-			incidenceMatrix[i][j] = REAL(RincidenceMatrix)[i+nRegions*j];
+			incidenceMatrix[i][j] = INTEGER(RincidenceMatrix)[i+nRegions*j];
 		}
 	}
 
