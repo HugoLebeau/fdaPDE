@@ -631,28 +631,24 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 {
 	UInt niter=20;
 	FPCAObject FPCAinput(this->datamatrixResiduals_);
-	bool dof_computed=0;
 	UInt best_GCV=0;
 	std::vector<SpMat> AMat_lambda_vec;
 	std::vector<SpMat> MMat_lambda_vec;
 	
 	AMat_lambda_vec.resize(this->fpcaData_.getLambda().size());
 	MMat_lambda_vec.resize(this->fpcaData_.getLambda().size());
-	for(auto j=0; j<niter; j++)
+	for (auto i=0; i<this->fpcaData_.getLambda().size(); ++i)
 	{
-		FPCAinput.setObservationData(datamatrixResiduals_);
-		for(auto i = 0; i<this->fpcaData_.getLambda().size(); ++i)
+		Real lambda = this->fpcaData_.getLambda()[i];
+		AMat_lambda_vec[i] = (-lambda)*this->AMat_;
+		MMat_lambda_vec[i] = (-lambda)*this->MMat_;
+		for (auto j=0; j<niter; ++j)
 		{
-			Real lambda = this->fpcaData_.getLambda()[i];
-			if(j==0)
-			{
-				AMat_lambda_vec[i] = (-lambda)*this->AMat_;
-				MMat_lambda_vec[i] = (-lambda)*this->MMat_;
-				this->buildCoeffMatrix(this->DMat_, AMat_lambda_vec[i], MMat_lambda_vec[i]);
+			FPCAinput.setObservationData(datamatrixResiduals_);
+			this->buildCoeffMatrix(this->DMat_, AMat_lambda_vec[i], MMat_lambda_vec[i]);
+			if (j==0){
 				this->sparseSolver_.analyzePattern(this->coeffmatrix_);
 			}
-			else
-				this->buildCoeffMatrix(this->DMat_, AMat_lambda_vec[i], MMat_lambda_vec[i]);
 			
 			this->sparseSolver_.factorize(this->coeffmatrix_);
 			this->solution_[i].resize(this->coeffmatrix_.rows());
@@ -660,37 +656,27 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 			this->computeRightHandData(rightHandData,FPCAinput);
 			this->b_ = VectorXr::Zero(2*nnodes);
 			this->b_.topRows(nnodes) = rightHandData;
-			
+
 			this->solution_[i]=this->sparseSolver_.solve(this->b_);
-			if(this->sparseSolver_.info()!=Eigen::Success)
+			if (this->sparseSolver_.info()!=Eigen::Success)
 			{
 				//std::cerr<<"solving failed!"<<std::endl;
 			}
-			if(this->fpcaData_.isLocationsByNodes())
+			if (this->fpcaData_.isLocationsByNodes())
 				FPCAinput.setLoadings(nnodes, this->solution_[i], this->fpcaData_.getObservationsIndices());
 			else 
 				FPCAinput.setLoadingsPsi(nnodes, this->solution_[i],this->Psi_);
-				
+			
 			FPCAinput.setScores(this->datamatrixResiduals_);
 			loadings_lambda_[i]=FPCAinput.getLoadings();
 			scores_lambda_[i]=FPCAinput.getScores();
-			if(np==0 && dof_computed==0)
-			{
-				computeDegreesOfFreedom(i,this->fpcaData_.getLambda()[i]);
-				dof_computed=1;
-			}
-			computeGCV(FPCAinput,i);
 		}
-		UInt index_best_GCV = std::distance(GCV_.begin(),std::min_element(GCV_.begin(),GCV_.end()));
-		if(this->fpcaData_.isLocationsByNodes())
-			FPCAinput.setLoadings(nnodes, this->solution_[index_best_GCV], this->fpcaData_.getObservationsIndices());
-		else 
-			FPCAinput.setLoadingsPsi(nnodes, this->solution_[index_best_GCV], this->Psi_);
-		std::cout << "Iter: " << j+1 << "\t Best lambda: " << this->fpcaData_.getLambda()[index_best_GCV] << std::endl;
-			
-		FPCAinput.setScores(this->datamatrixResiduals_);
-		best_GCV = index_best_GCV;
+		if (np==0){
+			computeDegreesOfFreedom(i,lambda);
+		}
+		computeGCV(FPCAinput,i);
 	}
+	best_GCV = std::distance(GCV_.begin(),std::min_element(GCV_.begin(),GCV_.end()));
 	
 	if(this->fpcaData_.isLocationsByNodes())
 	{
