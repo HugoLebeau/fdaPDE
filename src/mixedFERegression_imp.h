@@ -286,22 +286,6 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim, ndim>::setDelta(
 }
 
 template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
-void MixedFERegressionBase<InputHandler, Integrator, ORDER, mydim, ndim>::preProcessData()
-{
-	z_ = regressionData_.getObservations();
-	if (regressionData_.getNumberOfRegions() > 0) //areal data
-	{
-		VectorXr sqrtDelta(Delta_);
-		for (int r=0; r<regressionData_.getNumberOfRegions(); r++)
-		{
-			sqrtDelta(r) = std::sqrt(sqrtDelta(r));
-		}
-		psi_ = sqrtDelta.asDiagonal()*psi_;
-		z_ = sqrtDelta.asDiagonal()*z_;
-	}
-}
-
-template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
  void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::buildCoeffMatrix(const SpMat& DMat,  const SpMat& AMat,  const SpMat& MMat)
  {
  	//I reserve the exact memory for the nonzero entries of each row of the coeffmatrix for boosting performance
@@ -348,14 +332,23 @@ template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UIn
  
  		DMat.resize(nnodes,nnodes);
  
- 		if (regressionData_.getCovariates().rows() == 0) //without covariate
+ 		if (regressionData_.getCovariates().rows() == 0
+		 && regressionData_.getNumberOfRegions() == 0) //without covariate, pointwise data
 		{
 			DMat = psi_.transpose()*psi_;
 		}
- 		else //with covariates
+		else if (regressionData_.getCovariates().rows() == 0) //without covariate, areal data
+		{
+			DMat = psi_.transpose()*Delta_.asDiagonal()*psi_;
+		}
+ 		else if (regressionData_.getNumberOfRegions() == 0) //with covariates, pointwise data
  		{
  			DMat = (SpMat(psi_.transpose())*Q_*psi_).sparseView();
  		}
+		else //with covariates, areal data
+		{
+			DMat = (SpMat(psi_.transpose())*Delta_.asDiagonal()*Q_*psi_).sparseView();
+		}
  }
  
  template<typename InputHandler, typename Integrator, UInt ORDER, UInt mydim, UInt ndim>
@@ -397,24 +390,32 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::getRightHa
 	UInt nlocations = regressionData_.getNumberofObservations();
 	rightHandData = VectorXr::Zero(nnodes);
 
-	if(regressionData_.getCovariates().rows() == 0) //no covariate
+	if (regressionData_.getCovariates().rows() == 0) //no covariate
 	{
-		if(regressionData_.isLocationsByNodes())
+		if (regressionData_.isLocationsByNodes())
 		{
 			for (auto i=0; i<nlocations;++i)
 			{
 				auto index_i = regressionData_.getObservationsIndices()[i];
-				rightHandData(index_i) = z_[i];
+				rightHandData(index_i) = regressionData_.getObservations()[i];
 			}
 		}
-		else
+		else if (regressionData_.getNumberOfRegions() == 0) //pointwise data
 		{
-			rightHandData=psi_.transpose()*z_;
+			rightHandData=psi_.transpose()*regressionData_.getObservations();
+		}
+		else //areal data
+		{
+			rightHandData=psi_.transpose()*Delta_.asDiagonal()*regressionData_.getObservations();
 		}
 	}
-	else
+	else if (regressionData_.getNumberOfRegions() == 0) //with covariates, pointwise data
 	{
-		rightHandData=psi_.transpose()*LeftMultiplybyQ(z_);
+		rightHandData=psi_.transpose()*LeftMultiplybyQ(regressionData_.getObservations());
+	}
+	else //with covariates, areal data
+	{
+		rightHandData=psi_.transpose()*Delta_.asDiagonal()*LeftMultiplybyQ(regressionData_.getObservations());
 	}
 }
 
@@ -530,9 +531,14 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::computeDeg
 	}
 	// Case 2: Eigen
 	else{
-		MatrixXr X1 = psi_.transpose() * LeftMultiplybyQ(psi_);
+		MatrixXr X1;
+		if (regressionData_.getNumberOfRegions() == 0){ //pointwise data
+			X1 = psi_.transpose() * LeftMultiplybyQ(psi_);
+		}else{ //areal data
+			X1 = psi_.transpose() * Delta_.asDiagonal() * LeftMultiplybyQ(psi_);
+		}
 
-		if (isRcomputed_ == false ){
+		if (isRcomputed_ == false){
 			isRcomputed_ = true;
 			Eigen::SparseLU<SpMat> solver;
 			solver.compute(R0_);
@@ -606,9 +612,13 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::computeDeg
 		}
 	}
 
-	// Define the first right hand side : | I  0 |^T * psi^T * Q * u
+	// Define the first right hand side : | I  0 |^T * psi^T * Delta * Q * u
 	MatrixXr b = MatrixXr::Zero(2*nnodes,u.cols());
-	b.topRows(nnodes) = psi_.transpose()* LeftMultiplybyQ(u);
+	if (regressionData_.getNumberOfRegions() == 0){
+		b.topRows(nnodes) = psi_.transpose() * LeftMultiplybyQ(u);
+	}else{
+		b.topRows(nnodes) = psi_.transpose() * Delta_.asDiagonal() * LeftMultiplybyQ(u);
+	}
 
 	// Resolution of the system
 	//MatrixXr x = system_solve(b);
@@ -624,7 +634,7 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER,mydim,ndim>::computeDeg
 	if (regressionData_.getCovariates().rows() != 0) {
 		q = regressionData_.getCovariates().cols();
 	}
-	// For any realization we calculate the degrees of freedom
+	// For any realization we compute the degrees of freedom
 	for (int i=0; i<nrealizations; ++i) {
 		edf_vect(i) = uTpsi.row(i).dot(x.col(i).head(nnodes)) + q;
 	}
@@ -646,17 +656,17 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::apply(EO
 
 	setDelta();
 	setPsi();
-	preProcessData();
-
+	//preProcessData();
+	
 	if(!regressionData_.getCovariates().rows() == 0)
- 	{
- 		setH();
- 		setQ();
- 	}
+	{
+		setH();
+		setQ();
+	}
 
 	if(!regressionData_.isLocationsByNodes())
 	{
-		getDataMatrix(DMat_);
+		getDataMatrix(DMat_); //updated
 	}
 	else
 	{
@@ -667,7 +677,7 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::apply(EO
 	Assembler::operKernel(oper, mesh_, fe, R1_);
 	Assembler::operKernel(mass, mesh_, fe, R0_);
 	VectorXr rightHandData;
-	getRightHandData(rightHandData);
+	getRightHandData(rightHandData); //updated
 	this->_b = VectorXr::Zero(2*nnodes);
 	this->_b.topRows(nnodes)=rightHandData;
 	this->_solution.resize(regressionData_.getLambda().size());
@@ -683,8 +693,17 @@ void MixedFERegressionBase<InputHandler,Integrator,ORDER, mydim, ndim>::apply(EO
 		//Applying boundary conditions if necessary
 		if(regressionData_.getDirichletIndices().size() != 0)
 			addDirichletBC();
-		system_factorize();
-		_solution[i] = this->template system_solve(this->_b);
+		if (regressionData_.getNumberOfRegions() == 0) //pointwise data
+		{
+			system_factorize();
+			_solution[i] = this->template system_solve(this->_b);
+		}
+		else //areal data NOT OPTIMAL + NO BOUNDARY CONDITIONS
+		{
+			Eigen::SparseLU<SpMat> solver;
+			solver.compute(_coeffmatrix);
+			_solution[i] = solver.solve(this->_b);
+		}
 		if(regressionData_.computeDOF())
 			computeDegreesOfFreedom(i,lambda);
 		else
