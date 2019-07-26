@@ -66,7 +66,7 @@ CPP_smooth.FEM.basis<-function(locations, observations, FEMbasis, lambda, covari
   ## Call C++ function
   bigsol <- .Call("regression_Laplace", locations, observations, FEMbasis$mesh, FEMbasis$order,
                   mydim, ndim, lambda, covariates, incidence_matrix, BC$BC_indices, BC$BC_values,
-                  GCV,GCVmethod, nrealizations, PACKAGE = "fdaPDE")
+                  GCV, GCVmethod, nrealizations, PACKAGE = "fdaPDE")
   return(bigsol)
 }
 
@@ -255,7 +255,7 @@ CPP_eval.FEM = function(FEM, locations, incidence_matrix, redundancy, ndim, mydi
   storage.mode(redundancy) <- "integer"
   
   #Calling the C++ function "eval_FEM_fd" in RPDE_interface.cpp
-  evalmat = matrix(0,nrow(locations),ncol(coeff))
+  evalmat = matrix(0,max(nrow(locations),nrow(incidence_matrix)),ncol(coeff))
   for (i in 1:ncol(coeff)){
     evalmat[,i] <- .Call("eval_FEM_fd", FEMbasis$mesh, locations, incidence_matrix, coeff[,i],
                           FEMbasis$order, redundancy, mydim, ndim, package = "fdaPDE")

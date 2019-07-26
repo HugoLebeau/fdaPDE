@@ -675,16 +675,18 @@ void MixedFEFPCAGCV<Integrator,ORDER, mydim, ndim>::computeIterationsGCV(MatrixX
 			loadings_lambda_[i]=FPCAinput.getLoadings();
 			scores_lambda_[i]=FPCAinput.getScores();
 			if(np==0 && dof_computed==0)
+			{
 				computeDegreesOfFreedom(i,this->fpcaData_.getLambda()[i]);
-			
+				dof_computed=1;
+			}
 			computeGCV(FPCAinput,i);
 		}
-		dof_computed=1;
 		UInt index_best_GCV = std::distance(GCV_.begin(),std::min_element(GCV_.begin(),GCV_.end()));
 		if(this->fpcaData_.isLocationsByNodes())
 			FPCAinput.setLoadings(nnodes, this->solution_[index_best_GCV], this->fpcaData_.getObservationsIndices());
 		else 
 			FPCAinput.setLoadingsPsi(nnodes, this->solution_[index_best_GCV], this->Psi_);
+		std::cout << "Iter: " << j+1 << "\t Best lambda: " << this->fpcaData_.getLambda()[index_best_GCV] << std::endl;
 			
 		FPCAinput.setScores(this->datamatrixResiduals_);
 		best_GCV = index_best_GCV;

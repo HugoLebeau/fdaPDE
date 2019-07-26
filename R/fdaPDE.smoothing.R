@@ -114,7 +114,7 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
   }else
   {
     print('C++ Code Execution')
-    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, ndim, mydim, BC, GCV,GCVmethod, nrealizations)
+    bigsol = CPP_smooth.FEM.basis(locations, observations, FEMbasis, lambda, covariates, incidence_matrix, ndim, mydim, BC, GCV, GCVmethod, nrealizations)
   }
   
   numnodes = nrow(FEMbasis$mesh$nodes)
@@ -146,7 +146,7 @@ if(class(FEMbasis$mesh) == 'MESH2D'){
   beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, CPP_CODE, ndim, mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, edf = bigsol[[2]], ndim, mydim)
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, CPP_CODE = CPP_CODE, edf = bigsol[[2]], ndim, mydim)
     reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta)
@@ -280,7 +280,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
   beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, CPP_CODE, ndim, mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, edf = bigsol[[2]])
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, CPP_CODE = CPP_CODE, edf = bigsol[[2]])
     reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV, ndim, mydim)
   }else{
     reslist=list(fit.FEM = fit.FEM, PDEmisfit.FEM = PDEmisfit.FEM, beta = beta)
@@ -378,7 +378,7 @@ smooth.FEM.PDE.basis<-function(locations = NULL, observations, FEMbasis, lambda,
 #' FEM_CPP_PDE = smooth.FEM.PDE.sv.basis(observations = observations, 
 #'              FEMbasis = FEMbasis, lambda = lambda, PDE_parameters = PDE_parameters)
 #' plot(FEM_CPP_PDE$fit.FEM)
-smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE,GCVmethod = 2, nrealizations = 100)
+smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lambda, PDE_parameters, covariates = NULL, incidence_matrix = NULL, BC = NULL, GCV = FALSE, CPP_CODE = TRUE, GCVmethod = 2, nrealizations = 100)
 {
  if(class(FEMbasis$mesh) == "MESH2D"){
  	ndim = 2
@@ -430,10 +430,10 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
   PDEmisfit.FEM = FEM(g, FEMbasis)  
   
   reslist = NULL
-  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, CPP_CODE,ndim,mydim)
+  beta = getBetaCoefficients(locations, observations, fit.FEM, covariates, incidence_matrix, CPP_CODE, ndim, mydim)
   if(GCV == TRUE)
   {
-    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, edf = bigsol[[2]],ndim,mydim)
+    seq=getGCV(locations = locations, observations = observations, fit.FEM = fit.FEM, covariates = covariates, incidence_matrix = incidence_matrix, CPP_CODE = CPP_CODE, edf = bigsol[[2]], ndim, mydim)
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta, edf = bigsol[[2]], stderr = seq$stderr, GCV = seq$GCV)
   }else{
     reslist=list(fit.FEM=fit.FEM,PDEmisfit.FEM=PDEmisfit.FEM, beta = beta)
@@ -443,7 +443,7 @@ smooth.FEM.PDE.sv.basis<-function(locations = NULL, observations, FEMbasis, lamb
 }
 
 
-getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, incidence_matrix, CPP_CODE = FALSE, ndim, mydim)
+getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, incidence_matrix = NULL, CPP_CODE = FALSE, ndim, mydim)
 {
   loc_nodes = NULL
   fnhat = NULL
@@ -469,20 +469,20 @@ getBetaCoefficients<-function(locations, observations, fit.FEM, covariates, inci
 }
 
 
-getGCV<-function(locations, observations, fit.FEM, covariates = NULL, incidence_matrix, edf, ndim, mydim)
+getGCV<-function(locations, observations, fit.FEM, covariates = NULL, incidence_matrix = NULL, CPP_CODE = FALSE, edf, ndim, mydim)
 {
   loc_nodes = NULL
   fnhat = NULL
   
   edf = as.vector(edf)
     
-  if(is.null(locations))
+  if(is.null(locations) && is.null(incidence_matrix))
   {
     loc_nodes = (1:length(observations))[!is.na(observations)]
     fnhat = as.matrix(fit.FEM$coeff[loc_nodes,])
   }else{
     loc_nodes = 1:length(observations)
-    fnhat = eval.FEM(FEM = fit.FEM, locations = locations, incidence_matrix = incidence_matrix, CPP_CODE = FALSE)
+    fnhat = eval.FEM(FEM = fit.FEM, locations = locations, incidence_matrix = incidence_matrix, CPP_CODE = CPP_CODE)
   }
   
   zhat = NULL
@@ -493,7 +493,7 @@ getGCV<-function(locations, observations, fit.FEM, covariates = NULL, incidence_
     for ( i in 1:length(edf))
     {
       betahat  = desmatprod %*% (observations-fnhat[,i])
-      zhat[,i]     = covariates %*% betahat + fnhat[,i]
+      zhat[,i] = covariates %*% betahat + fnhat[,i]
     }
   }else{
     zhat = fnhat
