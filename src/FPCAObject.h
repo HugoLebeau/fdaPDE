@@ -19,6 +19,10 @@ class  FPCAObject{
 		VectorXr scores_;
 		VectorXr loadings_;
 		
+		//Initialization of loadings and scores vectors
+		VectorXr scores0_;
+		VectorXr loadings0_;
+
 		//Regression data
 		VectorXr ObservationData_;
 
@@ -28,6 +32,8 @@ class  FPCAObject{
 		
 		//!A constructor of the FPCAObject. As parameter it only takes the reference to the datamatrix X. In the constructor, the SVD decomposition of the matrix is performed and the loadings and the scores vector are initialized.
 		explicit FPCAObject(const MatrixXr& datamatrix_);
+		//!A method for resetting the loadings and scores vectors to their initial values
+		void reset();
 		
 		//!A method for updating the Scores vector given the datamatrix
 		void setScores(const MatrixXr& datamatrix_);

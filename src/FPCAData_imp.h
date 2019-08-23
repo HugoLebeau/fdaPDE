@@ -64,7 +64,7 @@ void FPCAData::setDatamatrix(SEXP Rdatamatrix)
 	observations_indices_.reserve(p_);
 	VectorXr auxiliary_row_;
 	auxiliary_row_.resize(p_);
-	if(locations_.size() == 0)
+	if(locations_.size() == 0 && nRegions_ == 0)
 	{
 		locations_by_nodes_ = true;
 		for(auto i=0; i<n_; ++i)

@@ -9,6 +9,8 @@
 #' @param locations A #observations-by-ndim matrix where each row specifies the spatial coordinates \code{x} and \code{y} (and \code{z} if ndim=3) of the corresponding column of observations in the matrix \code{datamatrix}.
 #' This parameter can be \code{NULL}. In this case the spatial coordinates of the corresponding observations are assigned as specified in \code{datamatrix}.
 #' @param FEMbasis A \code{FEMbasis} object describing the Finite Element basis, as created by \code{\link{create.FEM.basis}}.
+#' @param incidence_matrix A #regions-by-#triangles/tetrahedrons matrix where the element (i,j) equals 1 if the j-th triangle/tetrahedron is in the i-th region and 0 otherwise.
+#' This is only for areal data. In case of pointwise data, this parameter is set to \code{NULL}.
 #' @param lambda A scalar or vector of smoothing parameters.
 #' @param nPC An integer specifying the number of Principal Components to compute.
 #' @param validation String. If \code{lambda} is a vector, it has to be specified as \code{"GCV"} or \code{"KFold"}. This parameter specify which method of cross-validation is used to select the best parameter \code{lambda} among those values of the smoothing parameter specified in \code{lambda} for each Principal Component.

@@ -5,13 +5,18 @@
 
 FPCAObject::FPCAObject(const MatrixXr& datamatrix_)
 {
-	//Initialize loadings vector
 	Eigen::JacobiSVD<MatrixXr> svd(datamatrix_, Eigen::ComputeThinU | Eigen::ComputeThinV);
-		
-	loadings_=svd.matrixV().col(0);
-	scores_=svd.matrixU().col(0); // (U * S)[:,1] / ||(U * S)[:,1]|| where X = USV^T
+	loadings0_=svd.matrixV().col(0);
+	scores0_=svd.matrixU().col(0); // (U * S)[:,1] / ||(U * S)[:,1]|| where X = USV^T
+	loadings_=loadings0_;
+	scores_=scores0_;
 }
 
+void FPCAObject::reset()
+{
+	loadings_=loadings0_;
+	scores_=scores0_;
+}
 
 void FPCAObject::printScores(std::ostream & out) const
 {
@@ -61,8 +66,8 @@ void FPCAObject::setObservationData(const MatrixXr& datamatrix_)
 
 void FPCAObject::setLoadingsPsi(UInt nnodes, const VectorXr& f_sol, const SpMat& psi_)
 {	
-	//VectorXr load_=psi_*f_sol.topRows(nnodes);
-	VectorXr load_=psi_.transpose()*f_sol.topRows(nnodes);
+	VectorXr load_=psi_*f_sol.topRows(nnodes);
+	//VectorXr load_=psi_.transpose()*f_sol.topRows(nnodes);
 	loadings_=load_;
 	//std::cout<<"Load dim:"<<loadings_.size()<<std::endl;
 }
