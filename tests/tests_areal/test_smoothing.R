@@ -3,12 +3,12 @@ graphics.off()
 
 library(fdaPDE)
 
-dimension<-"2.5"
+dimension<-"2"
 
 path<-"~/Documents/ENSTA Paris 2A/PRe/Projet/fdaPDE/"
 
 ## WORKING DIRECTORY
-setwd(paste(path,"RScripts/",dimension,"D Mesh/",sep=''))
+setwd(paste(path,"tests/tests_areal/",dimension,"D Mesh/",sep=''))
 
 ## READ MESH
 nodes<-as.matrix(read.csv("node.csv",sep=';',header=FALSE))
@@ -44,8 +44,8 @@ z<-function(p)
 {
   #sum(p)
   #exp(p[1])+3*p[1]*p[2]
-  #cos(p[1])+sin(p[2])
-  cos(p[1])+sin(p[2])+cos(p[3])
+  cos(p[1])+sin(p[2])
+  #cos(p[1])+sin(p[2])+cos(p[3])
 }
 cov.areal<-NULL
 #cov.areal<-matrix(c(9,2,3))
@@ -88,12 +88,10 @@ smooth.pointwise<-smooth.FEM.basis(locations=locations,observations=observations
 smooth.areal<-smooth.FEM.basis(observations=observations.areal,FEMbasis=FEMbasis,lambda=lambda,
                                covariates=cov.areal,incidence_matrix=incidence_matrix,GCV=GCV)
 
-smooth.pointwise$GCV
-smooth.areal$GCV
 if (is.null(cov.areal)){
   RMSE.pointwise<-sqrt(mean((apply(nodes,1,z)-smooth.pointwise$fit.FEM$coeff[,which.min(smooth.pointwise$GCV)])^2))
   RMSE.areal<-sqrt(mean((apply(nodes,1,z)-smooth.areal$fit.FEM$coeff[,which.min(smooth.areal$GCV)])^2))
-  mean.absz<-sum(abs(apply(nodes,1,z)))/nrow(nodes)
+  norm.z<-sqrt(sum(apply(nodes,1,z)^2))
 }else{
   truez<-observations.pointwise
   wbhat<-c(cov.pointwise%*%smooth.pointwise$beta)
@@ -107,12 +105,15 @@ if (is.null(cov.areal)){
   }
   fbarhat<-fbarhat/table(ref[,2])
   RMSE.areal<-sqrt(mean((zbar-wbarbhat-fbarhat)^2))
-  mean.absz<-sum(abs(apply(locations,1,z)))/nrow(locations)
+  norm.z<-sqrt(sum(apply(nodes,1,z)^2))
 }
+
+smooth.pointwise$GCV
+smooth.areal$GCV
 RMSE.pointwise
 RMSE.areal
-RMSE.pointwise/mean.absz
-RMSE.areal/mean.absz
+100*RMSE.pointwise/norm.z
+100*RMSE.areal/norm.z
 
-#plot.FEM(smooth.pointwise$fit.FEM)
-#plot.FEM(smooth.areal$fit.FEM)
+plot.FEM(smooth.pointwise$fit.FEM)
+plot.FEM(smooth.areal$fit.FEM)
